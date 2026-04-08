@@ -154,6 +154,7 @@
 "home.active_communities" = "アクティブなコミュニティ";
 "home.recent_comments" = "最近のコメント";
 "home.recent_posts" = "最近の投稿";
+"home.posts_without_community" = "コミュニティなしの絵";
 
 /* Post Detail */
 "post.loading" = "投稿読み込み中...";

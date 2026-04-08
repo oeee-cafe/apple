@@ -154,6 +154,7 @@
 "home.active_communities" = "Active Communities";
 "home.recent_comments" = "Recent Comments";
 "home.recent_posts" = "Recent Posts";
+"home.posts_without_community" = "Posts without a community";
 
 /* Post Detail */
 "post.loading" = "Loading post...";

@@ -19,6 +19,18 @@ class PostService {
         )
     }
 
+    func fetchPostsWithoutCommunity(offset: Int = 0, limit: Int = 18) async throws -> PostsResponse {
+        let queryItems = [
+            URLQueryItem(name: "offset", value: String(offset)),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+
+        return try await apiClient.fetch(
+            path: "/api/v1/posts/without-community",
+            queryItems: queryItems
+        )
+    }
+
     func fetchPostDetails(postId: String) async throws -> PostDetailResponse {
         return try await apiClient.fetch(
             path: "/api/v1/posts/\(postId)",
