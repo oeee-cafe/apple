@@ -154,7 +154,6 @@
 "home.active_communities" = "활성 커뮤니티";
 "home.recent_comments" = "최근 댓글";
 "home.recent_posts" = "최근 게시물";
-"home.posts_without_community" = "커뮤니티에 속하지 않은 그림들";
 
 /* Post Detail */
 "post.loading" = "게시물 불러오는 중...";

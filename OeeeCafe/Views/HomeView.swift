@@ -68,46 +68,6 @@ struct HomeView: View {
                             }
                         }
 
-                        // Posts Without Community Section
-                        if !viewModel.postsWithoutCommunity.isEmpty {
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text("home.posts_without_community".localized)
-                                    .font(.title2)
-                                    .fontWeight(.bold)
-                                    .padding(.horizontal)
-
-                                LazyVGrid(columns: columns, spacing: 8) {
-                                    ForEach(viewModel.postsWithoutCommunity) { post in
-                                        NavigationLink(destination: PostDetailView(postId: post.id)) {
-                                            PostGridItem(post: post)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .onAppear {
-                                            if let lastPost = viewModel.postsWithoutCommunity.last,
-                                               post.id == lastPost.id,
-                                               viewModel.hasMoreWithoutCommunity,
-                                               !viewModel.isLoadingMoreWithoutCommunity {
-                                                Task {
-                                                    await viewModel.loadMoreWithoutCommunity()
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    if viewModel.isLoadingMoreWithoutCommunity {
-                                        HStack {
-                                            Spacer()
-                                            ProgressView()
-                                                .padding()
-                                            Spacer()
-                                        }
-                                        .gridCellColumns(3)
-                                    }
-                                }
-                                .padding(8)
-                            }
-                        }
-
                         // Posts Section
                         VStack(alignment: .leading, spacing: 12) {
                             Text("home.recent_posts".localized)
