@@ -116,16 +116,6 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     }, true);
     """
 
-    #if os(iOS)
-    /// Tells the site it is in the iOS app, as the Mac app tells it with `data-desktop`: the
-    /// site then leaves scrolling to iOS -- the page scrolls and bounces at every width, so
-    /// the web view's own scroll view gives pull to refresh, a tap on the status bar to go
-    /// back to the top, and iOS's scroll indicator.
-    private static let mobileScript = """
-    document.documentElement.setAttribute("data-mobile", "ios");
-    """
-    #endif
-
     init(tab: WebTab) {
         self.tab = tab
 
@@ -138,6 +128,8 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         configuration.applicationNameForUserAgent = "OeeeCafeMac"
         SiteChrome.configure(configuration)
         #else
+        // The site knows the app by this, and leaves search and scrolling to iOS
+        // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web).
         configuration.applicationNameForUserAgent = "OeeeCafeiOS"
         #endif
         configuration.userContentController.addUserScript(WKUserScript(
@@ -145,13 +137,6 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
-        #if os(iOS)
-        configuration.userContentController.addUserScript(WKUserScript(
-            source: Self.mobileScript,
-            injectionTime: .atDocumentStart,
-            forMainFrameOnly: true
-        ))
-        #endif
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
