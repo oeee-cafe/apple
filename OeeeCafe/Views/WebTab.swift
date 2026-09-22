@@ -6,8 +6,6 @@ import WebKit
 enum WebTab: String, CaseIterable {
     case home
     case communities
-    case collaborate
-    case drafts
     case notifications
     case login
     case search
@@ -16,8 +14,6 @@ enum WebTab: String, CaseIterable {
         switch self {
         case .home: return "/"
         case .communities: return "/communities"
-        case .collaborate: return "/collaborate"
-        case .drafts: return "/posts/drafts"
         case .notifications: return "/notifications"
         case .login: return "/login"
         case .search: return "/search"
@@ -28,8 +24,6 @@ enum WebTab: String, CaseIterable {
         switch self {
         case .home: return "tab.home".localized
         case .communities: return "tab.communities".localized
-        case .collaborate: return "tab.collaborate".localized
-        case .drafts: return "tab.drafts".localized
         case .notifications: return "tab.notifications".localized
         case .login: return "tab.login".localized
         case .search: return "tab.search".localized
@@ -40,8 +34,6 @@ enum WebTab: String, CaseIterable {
         switch self {
         case .home: return "house.fill"
         case .communities: return "person.3.fill"
-        case .collaborate: return "person.2.crop.square.stack"
-        case .drafts: return "doc.text"
         case .notifications: return "bell"
         case .login: return "person.circle"
         case .search: return "magnifyingglass"
@@ -50,8 +42,8 @@ enum WebTab: String, CaseIterable {
 
     static func visible(isAuthenticated: Bool) -> [WebTab] {
         isAuthenticated
-            ? [.home, .communities, .collaborate, .drafts, .notifications, .search]
-            : [.home, .communities, .collaborate, .login, .search]
+            ? [.home, .communities, .notifications, .search]
+            : [.home, .communities, .login, .search]
     }
 
     var rootURL: URL {

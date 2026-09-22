@@ -113,12 +113,10 @@ struct ContentView: View {
 final class BadgeCounts: ObservableObject {
     @Published private var unreadNotifications = 0
     @Published private var invitations = 0
-    @Published private var drafts = 0
 
     func count(for tab: WebTab) -> Int {
         switch tab {
         case .notifications: return unreadNotifications + invitations
-        case .drafts: return drafts
         default: return 0
         }
     }
@@ -127,22 +125,18 @@ final class BadgeCounts: ObservableObject {
         let api = APIClient.shared
         async let unread: UnreadCount? = try? api.fetch(path: "/api/v1/notifications/unread-count")
         async let invitations: Invitations? = try? api.fetch(path: "/api/v1/invitations")
-        async let drafts: Drafts? = try? api.fetch(path: "/api/v1/posts/drafts")
         if let unread = await unread { self.unreadNotifications = unread.count }
         if let invitations = await invitations { self.invitations = invitations.invitations.count }
-        if let drafts = await drafts { self.drafts = drafts.drafts.count }
     }
 
     func clear() {
         unreadNotifications = 0
         invitations = 0
-        drafts = 0
     }
 
     private struct Item: Decodable {}
     private struct UnreadCount: Decodable { let count: Int }
     private struct Invitations: Decodable { let invitations: [Item] }
-    private struct Drafts: Decodable { let drafts: [Item] }
 }
 
 #Preview {
