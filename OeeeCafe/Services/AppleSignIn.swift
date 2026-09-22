@@ -36,6 +36,7 @@ enum AppleSignIn {
     static func signIn(in webView: WKWebView, next: String?) async {
         guard let started = await start(in: webView, next: next) else {
             Logger.warning("AppleSignIn: The site did not start a sign-in", category: Logger.auth)
+            await stay(in: webView)
             return
         }
 
@@ -48,6 +49,7 @@ enum AppleSignIn {
             credential = try await Authorization(anchor: webView.window).perform(request)
         } catch let error as ASAuthorizationError where error.code == .canceled {
             // Put away without signing in: the page stays as it was.
+            await stay(in: webView)
             return
         } catch {
             Logger.warning("AppleSignIn: Apple did not sign in - \(error.localizedDescription)", category: Logger.auth)
@@ -65,6 +67,14 @@ enum AppleSignIn {
             fields["user"] = user
         }
         await answer(in: webView, fields: fields, next: next)
+    }
+
+    /// Shows the page as it was before the link was tapped. A page from before the site
+    /// knew the app took this link slid a skeleton in over itself for the page it thought
+    /// was coming (toolbar.jinja in oeee-cafe/web); nothing is coming, so it comes down,
+    /// as it does when a page cannot be reached (WebTab.swift).
+    private static func stay(in webView: WKWebView) async {
+        _ = try? await webView.evaluateJavaScript("window.oeeeRestoreContent && window.oeeeRestoreContent();")
     }
 
     private struct Started {
