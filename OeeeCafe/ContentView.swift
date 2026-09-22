@@ -56,6 +56,7 @@ struct ContentView: View {
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color("Ground"))
             }
         }
         .task {

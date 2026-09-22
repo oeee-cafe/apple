@@ -89,6 +89,8 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     let tab: WebTab
     let webView: WKWebView
     var onPageLoad: (() -> Void)?
+    /// Whether a page has finished loading, so the web view has a ground of its own.
+    private(set) var hasLoaded = false
     /// Called when a page could not be loaded at all, as when the site cannot be reached.
     var onLoadFailed: ((Error) -> Void)?
 
@@ -114,6 +116,16 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     }, true);
     """
 
+    #if os(iOS)
+    /// Tells the site it is in the iOS app, as the Mac app tells it with `data-desktop`: the
+    /// site then leaves scrolling to iOS -- the page scrolls and bounces at every width, so
+    /// the web view's own scroll view gives pull to refresh, a tap on the status bar to go
+    /// back to the top, and iOS's scroll indicator.
+    private static let mobileScript = """
+    document.documentElement.setAttribute("data-mobile", "ios");
+    """
+    #endif
+
     init(tab: WebTab) {
         self.tab = tab
 
@@ -133,6 +145,13 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
+        #if os(iOS)
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: Self.mobileScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+        #endif
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
@@ -141,6 +160,11 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         // gesture, not an application's.
         webView.allowsLinkPreview = false
         webView.underPageBackgroundColor = SiteChrome.ground
+        #else
+        // Until the first page paints, the ground shows through (WebTabView's container)
+        // rather than a white web view.
+        webView.isOpaque = false
+        webView.backgroundColor = .clear
         #endif
         #if DEBUG
         webView.isInspectable = true
@@ -156,6 +180,8 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         let refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.scrollView.refreshControl = refreshControl
+        // Pages shorter than the screen can be pulled too.
+        webView.scrollView.alwaysBounceVertical = true
         #endif
 
         // Search shows nothing until something is searched for.
@@ -252,6 +278,7 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+        hasLoaded = true
         endRefreshing()
         onPageLoad?()
     }
@@ -398,12 +425,14 @@ struct WebTabView: NSViewRepresentable {
     }
 }
 #else
+/// The container fills the screen, but the web view stops at the status bar: a page pulled
+/// down to refresh moves below it, with the spinner between, rather than under the Dynamic
+/// Island. Behind the status bar is the page's own ground, so at rest the two read as one.
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
 
     func makeUIView(context: Context) -> UIView {
-        let container = UIView()
-        container.backgroundColor = .systemBackground
+        let container = Container()
         attach(to: container)
         return container
     }
@@ -411,6 +440,21 @@ struct WebTabView: UIViewRepresentable {
     func updateUIView(_ container: UIView, context: Context) {
         if controller.webView.superview !== container {
             attach(to: container)
+        }
+    }
+
+    final class Container: UIView {
+        private var ground: NSKeyValueObservation?
+
+        func show(_ controller: WebTabController) {
+            let webView = controller.webView
+            // NEO's ground until the page says what its own is.
+            backgroundColor = controller.hasLoaded ? webView.underPageBackgroundColor : UIColor(named: "Ground")
+            ground = webView.observe(\.underPageBackgroundColor) { [weak self] webView, _ in
+                MainActor.assumeIsolated {
+                    self?.backgroundColor = webView.underPageBackgroundColor
+                }
+            }
         }
     }
 }
@@ -422,10 +466,16 @@ extension WebTabView {
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(webView)
+        #if os(macOS)
+        let top = container.topAnchor
+        #else
+        (container as? Container)?.show(controller)
+        let top = container.safeAreaLayoutGuide.topAnchor
+        #endif
         NSLayoutConstraint.activate([
             webView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             webView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-            webView.topAnchor.constraint(equalTo: container.topAnchor),
+            webView.topAnchor.constraint(equalTo: top),
             webView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
     }

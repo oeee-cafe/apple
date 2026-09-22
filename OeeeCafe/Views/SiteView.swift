@@ -259,13 +259,9 @@ private struct SiteWindowSetup: NSViewRepresentable {
 
 /// What the site is told, and what it may ask of the window.
 enum SiteChrome {
-    /// NEO's ground, lavender by day and night blue by night, under the page so a load
-    /// does not flash.
-    static let ground = NSColor(name: nil) { appearance in
-        appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
-            ? NSColor(srgbRed: 0x17 / 255, green: 0x17 / 255, blue: 0x2b / 255, alpha: 1)
-            : NSColor(srgbRed: 0xcc / 255, green: 0xcc / 255, blue: 0xff / 255, alpha: 1)
-    }
+    /// NEO's ground, lavender by day and night blue by night (the asset catalog's Ground),
+    /// under the page so a load does not flash.
+    static let ground = NSColor(named: "Ground")!
 
     /// Where the traffic lights sit: their left edge, and how far down the title bar reaches
     /// so their centre meets the middle of the site's 52pt toolbar. oeee-cafe/desktop's
