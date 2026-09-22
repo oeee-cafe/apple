@@ -21,17 +21,32 @@ final class WebSession {
     /// once the web views have what they need -- left, they would go stale and could sign
     /// the web views back in as someone long signed out, the next time they were empty.
     func start() async {
-        let store = dataStore.httpCookieStore
-        let storage = HTTPCookieStorage.shared
-        let native = (storage.cookies ?? []).filter(matchesSite)
+        guard let host = site?.host else { return }
+        let native = await Self.nativeCookies(host: host)
         guard !native.isEmpty else { return }
+        let store = dataStore.httpCookieStore
         if !(await store.allCookies()).contains(where: matchesSite) {
             Logger.info("WebSession: Carrying over the native app's session", category: Logger.auth)
             for cookie in native {
                 await store.setCookie(cookie)
             }
         }
-        native.forEach(storage.deleteCookie)
+        await Self.forget(native)
+    }
+
+    /// HTTPCookieStorage keeps its cookies on disk and reaches them through a worker of its
+    /// own, running no higher than the thread that asked. Asked from the main thread -- and
+    /// `start()` is called from a view's `task`, so it is the main thread -- the interface
+    /// waits on that slower worker, which is the priority inversion the runtime complains
+    /// of. Both touches of the storage therefore happen away from the main actor instead.
+    @concurrent
+    private nonisolated static func nativeCookies(host: String) async -> [HTTPCookie] {
+        (HTTPCookieStorage.shared.cookies ?? []).filter { matches(host: host, $0) }
+    }
+
+    @concurrent
+    private nonisolated static func forget(_ cookies: [HTTPCookie]) async {
+        cookies.forEach(HTTPCookieStorage.shared.deleteCookie)
     }
 
     /// The `Cookie` header the web views would send to `url`.
@@ -71,6 +86,10 @@ final class WebSession {
 
     private func matchesSite(_ cookie: HTTPCookie) -> Bool {
         guard let host = site?.host else { return false }
+        return Self.matches(host: host, cookie)
+    }
+
+    private nonisolated static func matches(host: String, _ cookie: HTTPCookie) -> Bool {
         let domain = cookie.domain.hasPrefix(".") ? String(cookie.domain.dropFirst()) : cookie.domain
         return host == domain || host.hasSuffix("." + domain)
     }
