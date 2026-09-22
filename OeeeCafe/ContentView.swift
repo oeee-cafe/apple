@@ -37,12 +37,18 @@ struct ContentView: View {
     var body: some View {
         Group {
             if isReady {
+                // Declared one by one rather than with ForEach: when the tabs change on
+                // signing in, a ForEach-built search tab loses its search role.
                 TabView(selection: selection) {
-                    ForEach(visibleTabs, id: \.self) { tab in
-                        Tab(tab.title, systemImage: tab.systemImage, value: tab, role: tab == .search ? .search : nil) {
-                            tabContent(tab)
-                        }
-                        .badge(badges.count(for: tab))
+                    webTab(.home)
+                    webTab(.communities)
+                    if authService.isAuthenticated {
+                        webTab(.notifications)
+                    } else {
+                        webTab(.login)
+                    }
+                    Tab(WebTab.search.title, systemImage: WebTab.search.systemImage, value: WebTab.search, role: .search) {
+                        SearchTabView(controller: webTabs.controller(for: .search))
                     }
                 }
             } else {
@@ -79,14 +85,12 @@ struct ContentView: View {
         }
     }
 
-    @ViewBuilder
-    private func tabContent(_ tab: WebTab) -> some View {
-        if tab == .search {
-            SearchTabView(controller: webTabs.controller(for: tab))
-        } else {
+    private func webTab(_ tab: WebTab) -> some TabContent<WebTab> {
+        Tab(tab.title, systemImage: tab.systemImage, value: tab) {
             WebTabView(controller: webTabs.controller(for: tab))
                 .ignoresSafeArea(.container)
         }
+        .badge(badges.count(for: tab))
     }
 
     private func authenticationChanged(_ isAuthenticated: Bool) async {
