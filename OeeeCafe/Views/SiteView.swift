@@ -126,8 +126,10 @@ struct SiteView: View {
             await WebSession.shared.start()
             Task { await AuthService.shared.checkOnce() }
             site.start()
-            await authenticationChanged(authService.isAuthenticated)
+            // Before asking about notifications: a page waiting to be opened is what the
+            // reader came for, and does not wait behind a permission they may sit on.
             openPendingNavigation()
+            await authenticationChanged(authService.isAuthenticated)
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             Task { await authenticationChanged(isAuthenticated) }
@@ -135,7 +137,8 @@ struct SiteView: View {
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
             openPendingNavigation()
         }
-        // A clicked oeee.cafe link, from another app (applinks, OeeeCafe-macOS.entitlements).
+        // A clicked oeee.cafe link handed over as a URL. The Mac hands over most of them
+        // as an activity instead, which AppDelegate hears (`application(_:continue:)`).
         .onOpenURL { url in
             navigationCoordinator.open(url)
         }

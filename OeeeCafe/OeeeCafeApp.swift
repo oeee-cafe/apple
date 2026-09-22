@@ -62,6 +62,23 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
         true
     }
 
+    /// "Open in Oeee Cafe", in Safari's address bar, and any other oeee.cafe link followed
+    /// on the Mac (applinks, OeeeCafe-macOS.entitlements). The Mac hands a universal link
+    /// to the application as an activity to carry on rather than as a URL to open, so
+    /// SwiftUI's `onOpenURL` never hears one here, and the page the reader was on would be
+    /// lost: the app would open at home. (The iPhone app is given the URL itself.)
+    func application(
+        _ application: NSApplication,
+        continue userActivity: NSUserActivity,
+        restorationHandler: @escaping ([any NSUserActivityRestoring]) -> Void
+    ) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL
+        else { return false }
+        navigationCoordinator.open(url)
+        return true
+    }
+
     /// ⌘Q, the Dock and logging out all ask here first: a page holding an unsaved drawing
     /// is asked before it is left.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

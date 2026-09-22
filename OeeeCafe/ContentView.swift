@@ -63,8 +63,10 @@ struct ContentView: View {
             await WebSession.shared.start()
             Task { await AuthService.shared.checkOnce() }
             isReady = true
-            await authenticationChanged(authService.isAuthenticated)
+            // Before asking about notifications: a page waiting to be opened is what the
+            // reader came for, and does not wait behind a permission they may sit on.
             openPendingNavigation()
+            await authenticationChanged(authService.isAuthenticated)
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             guard isReady else { return }
