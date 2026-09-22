@@ -23,6 +23,7 @@ final class Site: ObservableObject {
     func start() {
         guard controller == nil else { return }
         controller = WebTabController(tab: .home)
+        listenForSideButtons()
     }
 
     func load(_ url: URL) {
@@ -50,6 +51,38 @@ final class Site: ObservableObject {
     func forward() { evaluate("history.forward();") }
     /// A plain reload, so a page holding a drawing asks first.
     func reload() { evaluate("location.reload();") }
+
+    /// The two buttons under a mouse's thumb. WebKit hands them to the page as plain
+    /// auxiliary clicks and goes nowhere itself -- a browser carries them in its own
+    /// chrome -- so the app hears them here and asks for the same back and forward the
+    /// menu bar does. The page never sees them: a press meant for the history is not a
+    /// click on whatever it landed on.
+    private var sideButtons: Any?
+
+    private func listenForSideButtons() {
+        guard sideButtons == nil else { return }
+        sideButtons = NSEvent.addLocalMonitorForEvents(
+            matching: [.otherMouseDown, .otherMouseUp, .otherMouseDragged]
+        ) { event in
+            // The press acts as it goes down, as it does in a browser; the release and
+            // any drag between are swallowed with it.
+            let ours = MainActor.assumeIsolated { () -> Bool in
+                switch (event.buttonNumber, event.type) {
+                case (Self.backButton, .otherMouseDown): Site.shared.back()
+                case (Self.forwardButton, .otherMouseDown): Site.shared.forward()
+                case (Self.backButton, _), (Self.forwardButton, _): break
+                default: return false
+                }
+                return true
+            }
+            return ours ? nil : event
+        }
+    }
+
+    /// AppKit numbers the buttons from the left one: back and forward are the fourth and
+    /// the fifth.
+    private static let backButton = 3
+    private static let forwardButton = 4
 
     private func evaluate(_ script: String) {
         controller?.webView.evaluateJavaScript(script)
