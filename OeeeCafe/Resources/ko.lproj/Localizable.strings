@@ -404,3 +404,9 @@
 "leave.body" = "저장하지 않은 내용은 사라집니다.";
 "leave.leave" = "떠나기";
 "leave.stay" = "머무르기";
+
+// iOS app: a long press on a drawing
+"drawing.save" = "사진 앱에 저장";
+"drawing.copy" = "복사하기";
+"drawing.share" = "공유…";
+"drawing.copy_link" = "링크 복사하기";

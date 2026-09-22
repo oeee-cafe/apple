@@ -404,3 +404,9 @@
 "leave.body" = "未保存的内容将会丢失。";
 "leave.leave" = "离开";
 "leave.stay" = "留下";
+
+// iOS app: a long press on a drawing
+"drawing.save" = "存储到“照片”";
+"drawing.copy" = "拷贝";
+"drawing.share" = "共享…";
+"drawing.copy_link" = "拷贝链接";

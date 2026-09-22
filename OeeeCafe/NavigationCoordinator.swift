@@ -45,6 +45,25 @@ class NavigationCoordinator: ObservableObject {
     }
 
     /// Handle push notification payload and navigate to the appropriate screen
+    /// A link to the site from outside the app, shown in the tab it belongs to.
+    func open(_ url: URL) {
+        guard let site = URL(string: APIConfig.shared.baseURL), url.host == site.host,
+              var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
+        components.scheme = nil
+        components.host = nil
+        let path = components.string ?? url.path
+        let tab: WebTab
+        if url.path.hasPrefix(WebTab.notifications.path) {
+            tab = .notifications
+        } else if url.path.hasPrefix(WebTab.communities.path) {
+            tab = .communities
+        } else {
+            tab = .home
+        }
+        Logger.debug("NavigationCoordinator: Opening link \(path) in \(tab.rawValue) tab", category: Logger.app)
+        pendingNavigation = PendingNavigation(tab: tab, path: path)
+    }
+
     func handleNotificationTap(userInfo: [AnyHashable: Any]) {
         Logger.debug("NavigationCoordinator: Handling notification tap with data: \(userInfo)", category: Logger.app)
 

@@ -404,3 +404,9 @@
 "leave.body" = "Anything you have not saved will be lost.";
 "leave.leave" = "Leave";
 "leave.stay" = "Stay";
+
+// iOS app: a long press on a drawing
+"drawing.save" = "Save to Photos";
+"drawing.copy" = "Copy";
+"drawing.share" = "Share…";
+"drawing.copy_link" = "Copy Link";

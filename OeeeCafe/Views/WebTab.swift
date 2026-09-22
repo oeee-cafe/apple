@@ -99,6 +99,26 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
 
     private static let logoutMessageName = "oeeeLogout"
     private static let presenceMessageName = "oeeePresence"
+    private static let themeMessageName = "oeeeTheme"
+    private static let hapticMessageName = "oeeeHaptic"
+    /// Said by DrawingMenu.pressScript, on iOS.
+    private static let pressMessageName = "oeeePressed"
+
+    /// The site's own light/dark choice (`data-theme`, theme_head.jinja in oeee-cafe/web):
+    /// said by every page as it is shown, and again whenever the reader changes it.
+    private static let themeScript = """
+    (function () {
+      var root = document.documentElement;
+      function tell() {
+        window.webkit.messageHandlers.\(themeMessageName).postMessage(root.getAttribute('data-theme'));
+      }
+      tell();
+      new MutationObserver(tell).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+      window.addEventListener('pageshow', function (event) {
+        if (event.persisted) tell();
+      });
+    })();
+    """
 
     /// What the page is, as the site tells the Steam app (`<meta name="oeee-presence">`,
     /// src/web/presence.rs in oeee-cafe/web). A page without it is browsing. Said by every
@@ -204,6 +224,18 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
             injectionTime: .atDocumentEnd,
             forMainFrameOnly: true
         ))
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: Self.themeScript,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        ))
+        #if os(iOS)
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: DrawingMenu.pressScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+        #endif
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
@@ -226,6 +258,11 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
 
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.logoutMessageName)
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.presenceMessageName)
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.themeMessageName)
+        #if os(iOS)
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.hapticMessageName)
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.pressMessageName)
+        #endif
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
@@ -289,6 +326,7 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
 
     #if os(iOS)
     private let refreshControl = UIRefreshControl()
+    private var pressedDrawing: DrawingMenu.Drawing?
     #endif
 
     @objc private func refresh() {
@@ -430,6 +468,35 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         await JavaScriptDialog.present(message: prompt, in: webView, kind: .prompt(defaultText ?? ""))
     }
 
+    #if os(iOS)
+    /// A long press on a drawing: the app's own menu for it (DrawingMenu). Anywhere else the
+    /// site lets a press through -- text fields, what people wrote -- WebKit's own.
+    func webView(
+        _ webView: WKWebView,
+        contextMenuConfigurationForElement elementInfo: WKContextMenuElementInfo,
+        completionHandler: @escaping (UIContextMenuConfiguration?) -> Void
+    ) {
+        guard let drawing = pressedDrawing else {
+            completionHandler(nil)
+            return
+        }
+        completionHandler(DrawingMenu.configuration(for: drawing, in: webView))
+    }
+
+    /// Tapping the preview opens the drawing's post, as tapping the drawing would have.
+    func webView(
+        _ webView: WKWebView,
+        contextMenuForElement elementInfo: WKContextMenuElementInfo,
+        willCommitWithAnimator animator: UIContextMenuInteractionCommitAnimating
+    ) {
+        guard let link = pressedDrawing?.link ?? elementInfo.linkURL else { return }
+        animator.addCompletion { [weak self] in
+            self?.load(link)
+        }
+    }
+
+    #endif
+
     #if os(macOS)
     /// `<input type="file">`: iOS shows its own picker, macOS asks the app.
     func webView(
@@ -454,7 +521,19 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) async -> (Any?, String?) {
-        if message.name == Self.presenceMessageName {
+        if message.name == Self.themeMessageName {
+            SiteTheme.shared.choose(message.body as? String, in: webView.window)
+        } else if message.name == Self.hapticMessageName {
+            #if os(iOS)
+            if let name = message.body as? String {
+                Haptics.play(name)
+            }
+            #endif
+        } else if message.name == Self.pressMessageName {
+            #if os(iOS)
+            pressedDrawing = DrawingMenu.drawing(from: message.body, referrer: webView.url)
+            #endif
+        } else if message.name == Self.presenceMessageName {
             isPainting = (message.body as? String).map(Self.paintingActivities.contains) ?? false
             showPainting()
         } else if message.name == Self.logoutMessageName {

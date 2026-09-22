@@ -152,6 +152,10 @@ struct SiteView: View {
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
             openPendingNavigation()
         }
+        // A clicked oeee.cafe link, from another app (applinks, OeeeCafe-macOS.entitlements).
+        .onOpenURL { url in
+            navigationCoordinator.open(url)
+        }
     }
 
     private func authenticationChanged(_ isAuthenticated: Bool) async {
@@ -194,6 +198,7 @@ private struct SiteWindowSetup: NSViewRepresentable {
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
             window.backgroundColor = SiteChrome.ground
+            SiteTheme.shared.apply(to: window)
             if let close = window.standardWindowButton(.closeButton) {
                 close.target = Site.shared
                 close.action = #selector(Site.closeWindow(_:))

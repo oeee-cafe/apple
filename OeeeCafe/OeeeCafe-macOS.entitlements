@@ -7,6 +7,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>webcredentials:oeee.cafe</string>
+		<string>applinks:oeee.cafe</string>
 	</array>
 </dict>
 </plist>

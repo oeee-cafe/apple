@@ -86,6 +86,11 @@ struct ContentView: View {
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
             openPendingNavigation()
         }
+        // A tapped oeee.cafe link, from another app (applinks, OeeeCafe.entitlements).
+        .onOpenURL { url in
+            navigationCoordinator.open(url)
+        }
+        .background(SiteThemeApplier())
     }
 
     private func webTab(_ tab: WebTab) -> some TabContent<WebTab> {
@@ -112,6 +117,22 @@ struct ContentView: View {
         guard visibleTabs.contains(pending.tab), let url = pending.url else { return }
         tabSelection = pending.tab
         webTabs.controller(for: pending.tab).load(url)
+    }
+}
+
+/// Puts the site's light/dark choice on the window as soon as there is one, before any page
+/// has said it again.
+private struct SiteThemeApplier: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView { Applier() }
+    func updateUIView(_ uiView: UIView, context: Context) {}
+
+    final class Applier: UIView {
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if let window {
+                SiteTheme.shared.apply(to: window)
+            }
+        }
     }
 }
 

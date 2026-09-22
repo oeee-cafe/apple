@@ -404,3 +404,9 @@
 "leave.body" = "保存していない内容は失われます。";
 "leave.leave" = "離れる";
 "leave.stay" = "とどまる";
+
+// iOS app: a long press on a drawing
+"drawing.save" = "写真に保存";
+"drawing.copy" = "コピー";
+"drawing.share" = "共有…";
+"drawing.copy_link" = "リンクをコピー";
