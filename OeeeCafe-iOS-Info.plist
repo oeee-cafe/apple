@@ -11,7 +11,7 @@
 	     with PKCE. ASWebAuthenticationSession catches Google's redirect itself,
 	     so the reversed client id needs no CFBundleURLTypes entry. -->
 	<key>GoogleClientID</key>
-	<string></string>
+	<string>371775747741-6g94c9vfojlsosc1673ppv99b2nmacd5.apps.googleusercontent.com</string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
