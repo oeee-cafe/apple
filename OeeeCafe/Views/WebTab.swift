@@ -114,6 +114,24 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     }, true);
     """
 
+    /// The site turns off overscrolling, and on wide screens scrolls `main` instead of the page,
+    /// either of which keeps the web view's scroll view from being pulled to refresh.
+    /// Lets the page itself scroll and bounce, as it does on phones.
+    private static let pullToRefreshScript = """
+    (function () {
+      var style = document.createElement('style');
+      style.textContent = `
+        html, .ds-page { overscroll-behavior: auto !important; }
+        @media (min-width: 601px) {
+          html { height: auto !important; }
+          .ds-page { height: auto !important; overflow: visible !important; }
+          .ds-page > main.ds-content { overflow: visible !important; }
+        }
+      `;
+      document.documentElement.appendChild(style);
+    })();
+    """
+
     init(tab: WebTab) {
         self.tab = tab
 
@@ -133,6 +151,15 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
+        #if os(iOS)
+        // The Mac has no pull to refresh, and keeps the site's own scrolling: its toolbar
+        // floats over `main` there.
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: Self.pullToRefreshScript,
+            injectionTime: .atDocumentStart,
+            forMainFrameOnly: true
+        ))
+        #endif
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
@@ -156,6 +183,8 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         let refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.scrollView.refreshControl = refreshControl
+        // Pages shorter than the screen can be pulled too.
+        webView.scrollView.alwaysBounceVertical = true
         #endif
 
         // Search shows nothing until something is searched for.
