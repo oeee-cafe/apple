@@ -64,8 +64,14 @@ final class WebTabController: NSObject, ObservableObject {
         #else
         // The site knows the app by this, and leaves search and scrolling to iOS
         // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web) -- and signing in with
-        // Apple, which the app does itself (AppleSignIn).
-        configuration.applicationNameForUserAgent = "OeeeCafeiOS \(AppleSignIn.userAgentToken)"
+        // Apple and with Google, which the app does itself (AppleSignIn, GoogleSignIn).
+        // A build with no Google client id to sign in with leaves that one out, and the
+        // site shows no button for it.
+        var userAgent = "OeeeCafeiOS \(AppleSignIn.userAgentToken)"
+        if GoogleSignIn.isAvailable {
+            userAgent += " \(GoogleSignIn.userAgentToken)"
+        }
+        configuration.applicationNameForUserAgent = userAgent
         userScripts = []
         #endif
 

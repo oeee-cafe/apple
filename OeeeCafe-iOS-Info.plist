@@ -2,6 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- The iOS OAuth client id signing in with Google uses (GoogleSignIn.swift):
+	     Google Cloud console > APIs & Services > Credentials > iOS, in the same
+	     project as the site's web client, and listed in the site's
+	     [google].app_ids so it takes the tokens that name it. Left empty, the
+	     app does not offer signing in with Google and the site shows no button.
+	     Not a secret, and there is no secret: the sign-in is a public client
+	     with PKCE. ASWebAuthenticationSession catches Google's redirect itself,
+	     so the reversed client id needs no CFBundleURLTypes entry. -->
+	<key>GoogleClientID</key>
+	<string></string>
 	<key>UILaunchScreen</key>
 	<dict>
 		<key>UIColorName</key>
