@@ -111,6 +111,8 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
     private static let hapticMessageName = "oeeeHaptic"
     /// Said by DrawingMenu.pressScript, on iOS.
     private static let pressMessageName = "oeeePressed"
+    /// Said by the painter once it can be driven (frontend/painter/iosApp.ts in oeee-cafe/web).
+    private static let painterMessageName = "oeeePainter"
 
     /// The site's own light/dark choice (`data-theme`, theme_head.jinja in oeee-cafe/web):
     /// said by every page as it is shown, and again whenever the reader changes it.
@@ -304,6 +306,7 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         #if os(iOS)
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.hapticMessageName)
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.pressMessageName)
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.painterMessageName)
         #endif
         webView.navigationDelegate = self
         webView.uiDelegate = self
@@ -313,6 +316,16 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         #endif
         showPainting()
         #if os(iOS)
+        webView.addInteraction(pencil)
+        pencilOnlyObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            // The setting may have changed while the app was away.
+            MainActor.assumeIsolated {
+                guard let self, self.isPainting else { return }
+                self.showPencilOnly()
+            }
+        }
         showTextScale()
         textSizeObserver = NotificationCenter.default.addObserver(
             forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main
@@ -393,6 +406,17 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
     }
 
     #if os(iOS)
+    /// Apple Pencil's double-tap and squeeze, for the painter (PencilGestures below).
+    private lazy var pencil = UIPencilInteraction(delegate: self)
+    private var pencilOnlyObserver: NSObjectProtocol?
+
+    /// "Only Draw with Apple Pencil": fingers pan and pinch from the first stroke, rather
+    /// than from the first time the painter sees a pen.
+    private func showPencilOnly() {
+        guard UIPencilInteraction.prefersPencilOnlyDrawing else { return }
+        webView.evaluateJavaScript("window.oeeePainter && window.oeeePainter.preferPen();")
+    }
+
     private let refreshControl = UIRefreshControl()
     private var pressedDrawing: DrawingMenu.Drawing?
     #endif
@@ -409,6 +433,7 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         webView.scrollView.refreshControl = isPainting ? nil : refreshControl
         // Pages shorter than the screen can be pulled too.
         webView.scrollView.alwaysBounceVertical = !isPainting
+        pencil.isEnabled = isPainting
         if isPainting {
             webView.evaluateJavaScript(Self.holdScaleScript)
         }
@@ -648,6 +673,10 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
                 Haptics.play(name)
             }
             #endif
+        } else if message.name == Self.painterMessageName {
+            #if os(iOS)
+            showPencilOnly()
+            #endif
         } else if message.name == Self.pressMessageName {
             #if os(iOS)
             pressedDrawing = DrawingMenu.drawing(from: message.body, referrer: webView.url)
@@ -879,3 +908,31 @@ enum JavaScriptDialog {
     }
     #endif
 }
+
+#if os(iOS)
+// MARK: - Apple Pencil
+
+/// A double-tap or a squeeze does in the painter what the reader chose for it in Settings
+/// (Apple Pencil): switch to the eraser and back, or to the tool before. What the painter
+/// has no counterpart for -- a colour palette, ink attributes -- it leaves alone.
+extension WebTabController: UIPencilInteractionDelegate {
+    func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveTap tap: UIPencilInteraction.Tap) {
+        perform(UIPencilInteraction.preferredTapAction)
+    }
+
+    func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveSqueeze squeeze: UIPencilInteraction.Squeeze) {
+        guard squeeze.phase == .ended else { return }
+        perform(UIPencilInteraction.preferredSqueezeAction)
+    }
+
+    private func perform(_ action: UIPencilPreferredAction) {
+        let command: String
+        switch action {
+        case .switchEraser: command = "toggle-eraser"
+        case .switchPrevious: command = "previous-tool"
+        default: return
+        }
+        webView.evaluateJavaScript("window.oeeePainter && window.oeeePainter.command('\(command)');")
+    }
+}
+#endif
