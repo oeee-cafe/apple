@@ -1,6 +1,11 @@
 import SwiftUI
 import Combine
 import WebKit
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 /// A tab of the native tab bar, each showing its own page of the site.
 enum WebTab: String, CaseIterable {
@@ -84,6 +89,8 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     let tab: WebTab
     let webView: WKWebView
     var onPageLoad: (() -> Void)?
+    /// Called when a page could not be loaded at all, as when the site cannot be reached.
+    var onLoadFailed: ((Error) -> Void)?
 
     private static let logoutMessageName = "oeeeLogout"
 
@@ -112,8 +119,15 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
 
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = WebSession.shared.dataStore
+        #if os(iOS)
         configuration.allowsInlineMediaPlayback = true
+        #endif
+        #if os(macOS)
+        configuration.applicationNameForUserAgent = "OeeeCafeMac"
+        SiteChrome.configure(configuration)
+        #else
         configuration.applicationNameForUserAgent = "OeeeCafeiOS"
+        #endif
         configuration.userContentController.addUserScript(WKUserScript(
             source: Self.logoutScript,
             injectionTime: .atDocumentStart,
@@ -122,6 +136,12 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
+        #if os(macOS)
+        // A force click on a link opens WebKit's preview of the page, which is a browser's
+        // gesture, not an application's.
+        webView.allowsLinkPreview = false
+        webView.underPageBackgroundColor = SiteChrome.ground
+        #endif
         #if DEBUG
         webView.isInspectable = true
         #endif
@@ -132,9 +152,11 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
+        #if os(iOS)
         let refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.scrollView.refreshControl = refreshControl
+        #endif
 
         // Search shows nothing until something is searched for.
         if tab != .search {
@@ -157,6 +179,23 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
 
     /// Tapping the selected tab again: scroll to the top, or go back to the tab's own page.
     func reselect() {
+        #if os(macOS)
+        // There is no scroll view to ask on macOS. On wide windows the site scrolls `main`
+        // rather than the page, so whichever of the two is scrolled goes back to the top.
+        Task {
+            let scrolled = try? await webView.evaluateJavaScript("""
+            (function () {
+              var scrolled = [document.scrollingElement, document.querySelector('main.ds-content')]
+                .filter(function (element) { return element && element.scrollTop > 1; });
+              scrolled.forEach(function (element) { element.scrollTo({ top: 0, behavior: 'smooth' }); });
+              return scrolled.length > 0;
+            })();
+            """) as? Bool
+            if scrolled != true && webView.url?.path != tab.path {
+                load(tab.rootURL)
+            }
+        }
+        #else
         let scrollView = webView.scrollView
         let top = -scrollView.adjustedContentInset.top
         if scrollView.contentOffset.y > top + 1 {
@@ -164,6 +203,7 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         } else if webView.url?.path != tab.path {
             load(tab.rootURL)
         }
+        #endif
     }
 
     func tearDown() {
@@ -176,7 +216,17 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
     }
 
     private func endRefreshing() {
+        #if os(iOS)
         webView.scrollView.refreshControl?.endRefreshing()
+        #endif
+    }
+
+    private func openOutside(_ url: URL) {
+        #if os(macOS)
+        NSWorkspace.shared.open(url)
+        #else
+        UIApplication.shared.open(url)
+        #endif
     }
 
     private func isSiteURL(_ url: URL) -> Bool {
@@ -195,7 +245,7 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
 
         // Other sites (and mailto: etc.) open outside the app; embeds in frames load as usual.
         if isMainFrame && !(isWebURL && isSiteURL(url)) && url.scheme != "about" && url.scheme != "blob" && url.scheme != "data" {
-            await UIApplication.shared.open(url)
+            openOutside(url)
             return .cancel
         }
         return .allow
@@ -212,6 +262,7 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         endRefreshing()
+        onLoadFailed?(error)
         Logger.warning("WebTab \(tab.rawValue): Failed to load - \(error.localizedDescription)", category: Logger.network)
     }
 
@@ -232,11 +283,57 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
             if isSiteURL(url) {
                 webView.load(navigationAction.request)
             } else {
-                UIApplication.shared.open(url)
+                openOutside(url)
             }
         }
         return nil
     }
+
+    // WKWebView shows none of alert(), confirm() or prompt() by itself: without these,
+    // alert() does nothing and confirm() answers "cancel", which htmx takes as "no".
+
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptAlertPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo
+    ) async {
+        _ = await JavaScriptDialog.present(message: message, in: webView, kind: .alert)
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptConfirmPanelWithMessage message: String,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> Bool {
+        await JavaScriptDialog.present(message: message, in: webView, kind: .confirm) != nil
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        runJavaScriptTextInputPanelWithPrompt prompt: String,
+        defaultText: String?,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> String? {
+        await JavaScriptDialog.present(message: prompt, in: webView, kind: .prompt(defaultText ?? ""))
+    }
+
+    #if os(macOS)
+    /// `<input type="file">`: iOS shows its own picker, macOS asks the app.
+    func webView(
+        _ webView: WKWebView,
+        runOpenPanelWith parameters: WKOpenPanelParameters,
+        initiatedByFrame frame: WKFrameInfo
+    ) async -> [URL]? {
+        let panel = NSOpenPanel()
+        panel.canChooseFiles = true
+        panel.canChooseDirectories = parameters.allowsDirectories
+        panel.allowsMultipleSelection = parameters.allowsMultipleSelection
+        guard let window = webView.window else {
+            return panel.runModal() == .OK ? panel.urls : nil
+        }
+        return await panel.beginSheetModal(for: window) == .OK ? panel.urls : nil
+    }
+    #endif
 
     // MARK: - WKScriptMessageHandlerWithReply
 
@@ -265,10 +362,12 @@ struct SearchTabView: View {
                     .ignoresSafeArea(.container)
                 if !hasSearched {
                     ContentUnavailableView("tab.search".localized, systemImage: "magnifyingglass")
-                        .background(Color(uiColor: .systemBackground))
+                        .background(.background)
                 }
             }
+            #if os(iOS)
             .toolbar(.hidden, for: .navigationBar)
+            #endif
         }
         .searchable(text: $query)
         .onSubmit(of: .search) {
@@ -282,6 +381,23 @@ struct SearchTabView: View {
 
 /// Shows a tab's web view. The web view outlives this view, so it is hosted in a container
 /// rather than handed to SwiftUI directly.
+#if os(macOS)
+struct WebTabView: NSViewRepresentable {
+    let controller: WebTabController
+
+    func makeNSView(context: Context) -> NSView {
+        let container = NSView()
+        attach(to: container)
+        return container
+    }
+
+    func updateNSView(_ container: NSView, context: Context) {
+        if controller.webView.superview !== container {
+            attach(to: container)
+        }
+    }
+}
+#else
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
 
@@ -297,8 +413,11 @@ struct WebTabView: UIViewRepresentable {
             attach(to: container)
         }
     }
+}
+#endif
 
-    private func attach(to container: UIView) {
+extension WebTabView {
+    private func attach(to container: PlatformView) {
         let webView = controller.webView
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = false
@@ -310,4 +429,77 @@ struct WebTabView: UIViewRepresentable {
             webView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
     }
+}
+
+#if os(macOS)
+typealias PlatformView = NSView
+#else
+typealias PlatformView = UIView
+#endif
+
+/// A page's alert(), confirm() or prompt(), shown over the web view's window.
+/// Answers nil when cancelled, otherwise the entered text ("" for alerts and confirms).
+enum JavaScriptDialog {
+    enum Kind {
+        case alert
+        case confirm
+        case prompt(String)
+    }
+
+    #if os(macOS)
+    static func present(message: String, in webView: WKWebView, kind: Kind) async -> String? {
+        let alert = NSAlert()
+        alert.messageText = message
+        alert.addButton(withTitle: "common.ok".localized)
+        var field: NSTextField?
+        switch kind {
+        case .alert:
+            break
+        case .confirm:
+            alert.addButton(withTitle: "common.cancel".localized)
+        case .prompt(let defaultText):
+            alert.addButton(withTitle: "common.cancel".localized)
+            let textField = NSTextField(string: defaultText)
+            textField.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
+            alert.accessoryView = textField
+            alert.window.initialFirstResponder = textField
+            field = textField
+        }
+        let response: NSApplication.ModalResponse
+        if let window = webView.window {
+            response = await alert.beginSheetModal(for: window)
+        } else {
+            response = alert.runModal()
+        }
+        guard response == .alertFirstButtonReturn else { return nil }
+        return field?.stringValue ?? ""
+    }
+    #else
+    static func present(message: String, in webView: WKWebView, kind: Kind) async -> String? {
+        guard var presenter = webView.window?.rootViewController else { return nil }
+        while let presented = presenter.presentedViewController {
+            presenter = presented
+        }
+        return await withCheckedContinuation { continuation in
+            let alert = UIAlertController(title: nil, message: message, preferredStyle: .alert)
+            switch kind {
+            case .alert:
+                break
+            case .confirm:
+                alert.addAction(UIAlertAction(title: "common.cancel".localized, style: .cancel) { _ in
+                    continuation.resume(returning: nil)
+                })
+            case .prompt(let defaultText):
+                alert.addTextField { $0.text = defaultText }
+                alert.addAction(UIAlertAction(title: "common.cancel".localized, style: .cancel) { _ in
+                    continuation.resume(returning: nil)
+                })
+            }
+            alert.addAction(UIAlertAction(title: "common.ok".localized, style: .default) { [weak alert] _ in
+                continuation.resume(returning: alert?.textFields?.first?.text ?? "")
+            })
+            presenter.present(alert, animated: true)
+        }
+    }
+    #endif
 }

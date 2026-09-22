@@ -5,6 +5,8 @@
 //  Created by Jihyeok Seo on 10/29/25.
 //
 
+// The iPhone and iPad app. The Mac app is one window onto the site instead (SiteView.swift).
+#if os(iOS)
 import SwiftUI
 import Combine
 
@@ -147,3 +149,4 @@ final class BadgeCounts: ObservableObject {
     ContentView()
         .environmentObject(AuthService.shared)
 }
+#endif

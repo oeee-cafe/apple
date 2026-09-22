@@ -1,7 +1,11 @@
 import Foundation
 import UserNotifications
 import Combine
+#if os(macOS)
+import AppKit
+#else
 import UIKit
+#endif
 
 /// Service for managing push notification registration and token handling
 class PushNotificationService: ObservableObject {
@@ -44,7 +48,7 @@ class PushNotificationService: ObservableObject {
             if granted {
                 // Register for remote notifications on the main thread
                 await MainActor.run {
-                    UIApplication.shared.registerForRemoteNotifications()
+                    PlatformApplication.shared.registerForRemoteNotifications()
                 }
             }
         } catch {
@@ -70,6 +74,7 @@ class PushNotificationService: ObservableObject {
         }
 
         do {
+            // The Mac app shares the iOS app's bundle ID, so the server's APNs topic reaches it too.
             let request = RegisterDeviceRequest(deviceToken: tokenString, platform: "ios")
             let response: RegisterDeviceResponse = try await apiClient.post(
                 path: "/api/v1/devices",

@@ -12,27 +12,75 @@ import UserNotifications
 
 @main
 struct OeeeCafeApp: App {
+    #if os(macOS)
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #else
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    #endif
     @StateObject private var authService = AuthService.shared
 
     var body: some Scene {
+        #if os(macOS)
+        // One window onto the site, as oeee-cafe/desktop is (SiteView.swift).
+        Window("Oeee Cafe", id: "main") {
+            SiteView()
+                .environmentObject(authService)
+        }
+        .windowStyle(.hiddenTitleBar)
+        .defaultSize(width: 1280, height: 860)
+        .commands { SiteCommands() }
+        #else
         WindowGroup {
             ContentView()
                 .environmentObject(authService)
         }
+        #endif
     }
 }
 
 // MARK: - AppDelegate
 
-class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+#if os(macOS)
+typealias PlatformApplication = NSApplication
+typealias PlatformApplicationDelegate = NSApplicationDelegate
+#else
+typealias PlatformApplication = UIApplication
+typealias PlatformApplicationDelegate = UIApplicationDelegate
+#endif
+
+class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCenterDelegate {
     private let pushService = PushNotificationService.shared
     private let navigationCoordinator = NavigationCoordinator.shared
 
+    #if os(macOS)
+    func applicationDidFinishLaunching(_ notification: Notification) {
+        didFinishLaunching()
+    }
+
+    /// There is one window, and closing it is quitting (Site.closeWindow).
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        true
+    }
+
+    /// ⌘Q, the Dock and logging out all ask here first: a page holding an unsaved drawing
+    /// is asked before it is left.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        Task {
+            sender.reply(toApplicationShouldTerminate: await Site.shared.mayLeave())
+        }
+        return .terminateLater
+    }
+    #else
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
+        didFinishLaunching()
+        return true
+    }
+    #endif
+
+    private func didFinishLaunching() {
         SentrySDK.start { options in
             options.dsn = "https://cb81dc57b22c71d2c1a789a8905ea6b6@o4504757655764992.ingest.us.sentry.io/4510413260193792"
 
@@ -50,9 +98,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
                 $0.lifecycle = .trace
             }
 
+            #if os(iOS)
             // Uncomment the following lines to add more data to your events
             options.attachScreenshot = true // This adds a screenshot to the error events
             options.attachViewHierarchy = true // This adds the view hierarchy to the error events
+            #endif
             
             // Enable experimental logging features
             options.experimental.enableLogs = true
@@ -62,13 +112,11 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
         // Set notification delegate
         UNUserNotificationCenter.current().delegate = self
-
-        return true
     }
 
     // Called when APNs successfully registers the device
     func application(
-        _ application: UIApplication,
+        _ application: PlatformApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
         Task {
@@ -78,7 +126,7 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
 
     // Called when APNs registration fails
     func application(
-        _ application: UIApplication,
+        _ application: PlatformApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
         Logger.error("Failed to register for remote notifications", error: error, category: Logger.app)

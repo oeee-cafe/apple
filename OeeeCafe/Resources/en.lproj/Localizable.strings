@@ -369,3 +369,38 @@
 "error.slug_conflicts_with_user" = "This ID is already taken by a user";
 "error.slug_already_exists" = "A community with this ID already exists";
 "error.invalid_visibility_change" = "Cannot change visibility between private and public/unlisted";
+
+// Mac app: menu bar
+"menu.about" = "About Oeee Cafe";
+"menu.settings" = "Settings…";
+"menu.new_drawing" = "New Drawing";
+"menu.close_window" = "Close Window";
+"menu.search" = "Search…";
+"menu.recent" = "Recent";
+"menu.following" = "Following";
+"menu.communities" = "Communities";
+"menu.together" = "Draw Together";
+"menu.hashtags" = "Hashtags";
+"menu.notifications" = "Notifications";
+"menu.drafts" = "Drafts";
+"menu.profile" = "Profile";
+"menu.back" = "Back";
+"menu.forward" = "Forward";
+"menu.reload" = "Reload";
+"menu.theme" = "Theme";
+"menu.theme_light" = "Light";
+"menu.theme_dark" = "Dark";
+"menu.theme_system" = "System";
+"menu.shortcuts" = "Keyboard Shortcuts";
+
+// Mac app: connecting to the site
+"site.connecting" = "Connecting to Oeee Cafe…";
+"site.unreachable_title" = "Oeee Cafe can't be reached.";
+"site.unreachable_body" = "Check your internet connection and try again.";
+"site.retry" = "Try again";
+
+// Mac app: leaving a page with unsaved work
+"leave.title" = "Leave this page?";
+"leave.body" = "Anything you have not saved will be lost.";
+"leave.leave" = "Leave";
+"leave.stay" = "Stay";

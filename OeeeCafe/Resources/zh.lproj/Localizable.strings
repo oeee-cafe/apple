@@ -369,3 +369,38 @@
 "error.slug_conflicts_with_user" = "此ID已被用户使用";
 "error.slug_already_exists" = "具有此ID的社区已存在";
 "error.invalid_visibility_change" = "无法在私密和公开/仅链接之间更改可见性";
+
+// Mac app: menu bar
+"menu.about" = "关于黄瓜咖啡馆";
+"menu.settings" = "设置…";
+"menu.new_drawing" = "新建画作";
+"menu.close_window" = "关闭窗口";
+"menu.search" = "搜索…";
+"menu.recent" = "最新";
+"menu.following" = "时间线";
+"menu.communities" = "社区";
+"menu.together" = "一起画";
+"menu.hashtags" = "话题标签";
+"menu.notifications" = "通知";
+"menu.drafts" = "草稿";
+"menu.profile" = "个人资料";
+"menu.back" = "后退";
+"menu.forward" = "前进";
+"menu.reload" = "重新载入";
+"menu.theme" = "主题";
+"menu.theme_light" = "浅色";
+"menu.theme_dark" = "深色";
+"menu.theme_system" = "跟随系统";
+"menu.shortcuts" = "键盘快捷键";
+
+// Mac app: connecting to the site
+"site.connecting" = "正在连接黄瓜咖啡馆…";
+"site.unreachable_title" = "无法连接黄瓜咖啡馆。";
+"site.unreachable_body" = "请检查网络连接后重试。";
+"site.retry" = "重试";
+
+// Mac app: leaving a page with unsaved work
+"leave.title" = "要离开此页面吗？";
+"leave.body" = "未保存的内容将会丢失。";
+"leave.leave" = "离开";
+"leave.stay" = "留下";

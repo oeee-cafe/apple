@@ -369,3 +369,38 @@
 "error.slug_conflicts_with_user" = "이 ID는 이미 사용자가 사용 중입니다";
 "error.slug_already_exists" = "이 ID를 가진 커뮤니티가 이미 존재합니다";
 "error.invalid_visibility_change" = "비공개와 공개/링크 전용 간의 공개 범위 변경은 불가능합니다";
+
+// Mac app: menu bar
+"menu.about" = "오이카페에 관하여";
+"menu.settings" = "설정…";
+"menu.new_drawing" = "새 그림";
+"menu.close_window" = "윈도우 닫기";
+"menu.search" = "검색…";
+"menu.recent" = "최신";
+"menu.following" = "타임라인";
+"menu.communities" = "커뮤니티";
+"menu.together" = "함께 그리기";
+"menu.hashtags" = "해시태그";
+"menu.notifications" = "알림";
+"menu.drafts" = "임시 저장";
+"menu.profile" = "프로필";
+"menu.back" = "뒤로";
+"menu.forward" = "앞으로";
+"menu.reload" = "새로 고침";
+"menu.theme" = "테마";
+"menu.theme_light" = "라이트";
+"menu.theme_dark" = "다크";
+"menu.theme_system" = "시스템";
+"menu.shortcuts" = "키보드 단축키";
+
+// Mac app: connecting to the site
+"site.connecting" = "오이카페에 연결하는 중…";
+"site.unreachable_title" = "오이카페에 연결할 수 없습니다.";
+"site.unreachable_body" = "인터넷 연결을 확인한 뒤 다시 시도해 주세요.";
+"site.retry" = "다시 시도";
+
+// Mac app: leaving a page with unsaved work
+"leave.title" = "이 페이지를 떠날까요?";
+"leave.body" = "저장하지 않은 내용은 사라집니다.";
+"leave.leave" = "떠나기";
+"leave.stay" = "머무르기";

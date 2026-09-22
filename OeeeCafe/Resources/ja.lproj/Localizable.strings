@@ -369,3 +369,38 @@
 "error.slug_conflicts_with_user" = "このIDは既にユーザーによって使用されています";
 "error.slug_already_exists" = "このIDのコミュニティは既に存在します";
 "error.invalid_visibility_change" = "非公開と公開/リンクのみの間で公開設定を変更できません";
+
+// Mac app: menu bar
+"menu.about" = "OEEEカフェについて";
+"menu.settings" = "設定…";
+"menu.new_drawing" = "新規お絵かき";
+"menu.close_window" = "ウインドウを閉じる";
+"menu.search" = "検索…";
+"menu.recent" = "新着";
+"menu.following" = "タイムライン";
+"menu.communities" = "コミュニティ";
+"menu.together" = "一緒に描く";
+"menu.hashtags" = "ハッシュタグ";
+"menu.notifications" = "通知";
+"menu.drafts" = "下書き";
+"menu.profile" = "プロフィール";
+"menu.back" = "戻る";
+"menu.forward" = "進む";
+"menu.reload" = "再読み込み";
+"menu.theme" = "テーマ";
+"menu.theme_light" = "ライト";
+"menu.theme_dark" = "ダーク";
+"menu.theme_system" = "システム";
+"menu.shortcuts" = "キーボードショートカット";
+
+// Mac app: connecting to the site
+"site.connecting" = "OEEEカフェに接続しています…";
+"site.unreachable_title" = "OEEEカフェに接続できません。";
+"site.unreachable_body" = "インターネット接続を確認して、もう一度お試しください。";
+"site.retry" = "再試行";
+
+// Mac app: leaving a page with unsaved work
+"leave.title" = "このページを離れますか？";
+"leave.body" = "保存していない内容は失われます。";
+"leave.leave" = "離れる";
+"leave.stay" = "とどまる";
