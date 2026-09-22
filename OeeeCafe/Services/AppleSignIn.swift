@@ -52,19 +52,19 @@ enum AppleSignIn {
         } catch {
             Logger.warning("AppleSignIn: Apple did not sign in - \(error.localizedDescription)", category: Logger.auth)
             // The site says it could not confirm who this is, in the page's own words.
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
+            await answer(in: webView, fields: ["state": started.state, "error": "failed"], next: next)
             return
         }
 
         guard let token = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }) else {
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
+            await answer(in: webView, fields: ["state": started.state, "error": "failed"], next: next)
             return
         }
         var fields = ["state": started.state, "id_token": token]
         if let user = userField(credential.fullName) {
             fields["user"] = user
         }
-        await answer(in: webView, fields: fields)
+        await answer(in: webView, fields: fields, next: next)
     }
 
     private struct Started {
@@ -100,8 +100,25 @@ enum AppleSignIn {
     }
 
     /// Posts Apple's answer to `/auth/apple` from the page, which the site takes it from.
-    private static func answer(in webView: WKWebView, fields: [String: String]) async {
+    ///
+    /// Linking from the account page comes back to the account page (`next`), so there it
+    /// is posted without leaving and the page is shown again where it is, with the site's
+    /// word on how it went. Signing in goes on to wherever the site sends it.
+    private static func answer(in webView: WKWebView, fields: [String: String], next: String?) async {
         let script = """
+        if (next && next === location.pathname) {
+          await fetch("/auth/apple", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams(fields).toString(),
+            // The site's redirect back here is not followed: following it would
+            // show its message to the fetch rather than to the page.
+            redirect: "manual",
+          });
+          location.reload();
+          return;
+        }
         const form = document.createElement("form");
         form.method = "post";
         form.action = "/auth/apple";
@@ -118,7 +135,7 @@ enum AppleSignIn {
         """
         _ = try? await webView.callAsyncJavaScript(
             script,
-            arguments: ["fields": fields],
+            arguments: ["fields": fields, "next": next ?? NSNull()],
             in: nil,
             contentWorld: .defaultClient
         )
