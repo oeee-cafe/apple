@@ -90,8 +90,7 @@ struct ContentView: View {
 
     private func webTab(_ tab: WebTab) -> some TabContent<WebTab> {
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-            WebTabView(controller: webTabs.controller(for: tab))
-                .ignoresSafeArea(.container)
+            WebTabContent(controller: webTabs.controller(for: tab))
         }
         .badge(badges.count(for: tab))
     }
@@ -113,6 +112,23 @@ struct ContentView: View {
         guard visibleTabs.contains(pending.tab), let url = pending.url else { return }
         tabSelection = pending.tab
         webTabs.controller(for: pending.tab).load(url)
+    }
+}
+
+/// A tab's page. The painter has the whole screen, as a drawing app has: no tab bar or
+/// status bar, and a swipe in from an edge draws before it goes home.
+struct WebTabContent: View {
+    @ObservedObject var controller: WebTabController
+
+    var body: some View {
+        let painting = controller.isPainting
+        WebTabView(controller: controller)
+            .ignoresSafeArea(.container)
+            .toolbar(painting ? .hidden : .automatic, for: .tabBar)
+            .statusBarHidden(painting)
+            .persistentSystemOverlays(painting ? .hidden : .automatic)
+            .defersSystemGestures(on: painting ? .all : [])
+            .animation(.default, value: painting)
     }
 }
 

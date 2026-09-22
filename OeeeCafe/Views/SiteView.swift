@@ -89,49 +89,10 @@ final class Site: ObservableObject {
 
     // MARK: - Leaving
 
-    /// Whether the page would stop a browser from leaving it: its own `beforeunload`
-    /// handlers, asked the way a browser asks them. Closing the window unloads the page
-    /// without asking it, so the app asks first.
-    private static let wouldLoseWork = """
-    (function () {
-      var event;
-      try {
-        event = document.createEvent("BeforeUnloadEvent");
-        event.initEvent("beforeunload", false, true);
-      } catch (_) {
-        event = new Event("beforeunload", { cancelable: true });
-      }
-      window.dispatchEvent(event);
-      return event.defaultPrevented ||
-        (typeof event.returnValue === "string" && event.returnValue !== "");
-    })()
-    """
-
-    private var isAsking = false
-
     /// Whether the app may quit: at once, unless the page holds something unsaved and the
     /// player chooses to stay.
     func mayLeave() async -> Bool {
-        guard let webView = controller?.webView, !isAsking else { return !isAsking }
-        guard (try? await webView.evaluateJavaScript(Self.wouldLoseWork)) as? Bool == true else {
-            return true
-        }
-        isAsking = true
-        defer { isAsking = false }
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "leave.title".localized
-        alert.informativeText = "leave.body".localized
-        // Staying is the default, so a reflexive Return keeps the drawing.
-        alert.addButton(withTitle: "leave.stay".localized)
-        alert.addButton(withTitle: "leave.leave".localized)
-        let response: NSApplication.ModalResponse
-        if let window = webView.window {
-            response = await alert.beginSheetModal(for: window)
-        } else {
-            response = alert.runModal()
-        }
-        return response == .alertSecondButtonReturn
+        await controller?.mayLeave() ?? true
     }
 
     /// Closing the window is quitting: there is one window, and the page is asked first

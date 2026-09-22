@@ -85,16 +85,59 @@ final class WebTabStore: ObservableObject {
     }
 }
 
-final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandlerWithReply {
+final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, WKUIDelegate, WKScriptMessageHandlerWithReply {
     let tab: WebTab
     let webView: WKWebView
     var onPageLoad: (() -> Void)?
+    /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
+    /// not left without asking.
+    @Published private(set) var isPainting = false
     /// Whether a page has finished loading, so the web view has a ground of its own.
     private(set) var hasLoaded = false
     /// Called when a page could not be loaded at all, as when the site cannot be reached.
     var onLoadFailed: ((Error) -> Void)?
 
     private static let logoutMessageName = "oeeeLogout"
+    private static let presenceMessageName = "oeeePresence"
+
+    /// What the page is, as the site tells the Steam app (`<meta name="oeee-presence">`,
+    /// src/web/presence.rs in oeee-cafe/web). A page without it is browsing. Said by every
+    /// page, and again by one brought back from the back-forward cache, so the last word is
+    /// always the page on screen's.
+    private static let presenceScript = """
+    (function () {
+      function tell() {
+        var meta = document.querySelector('meta[name="oeee-presence"]');
+        window.webkit.messageHandlers.\(presenceMessageName).postMessage(meta ? meta.content : null);
+      }
+      tell();
+      window.addEventListener('pageshow', function (event) {
+        if (event.persisted) tell();
+      });
+    })();
+    """
+
+    /// The activities that are the painter; watching a replay is not.
+    private static let paintingActivities: Set<String> = ["drawing", "relaying", "drawing-banner", "collaborating"]
+
+    /// Whether the page would stop a browser from leaving it: its own `beforeunload`
+    /// handlers, asked the way a browser asks them. WKWebView asks none of them, so a
+    /// drawing would go without a word. The painter answers only for a drawing with
+    /// something in it, and not while it is being saved.
+    private static let wouldLoseWorkScript = """
+    (function () {
+      var event;
+      try {
+        event = document.createEvent("BeforeUnloadEvent");
+        event.initEvent("beforeunload", false, true);
+      } catch (_) {
+        event = new Event("beforeunload", { cancelable: true });
+      }
+      window.dispatchEvent(event);
+      return event.defaultPrevented ||
+        (typeof event.returnValue === "string" && event.returnValue !== "");
+    })()
+    """
 
     /// Holds a sign-out form's submission until the device's push token is unregistered,
     /// which needs the session the sign-out is about to end.
@@ -137,6 +180,11 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
             injectionTime: .atDocumentStart,
             forMainFrameOnly: true
         ))
+        configuration.userContentController.addUserScript(WKUserScript(
+            source: Self.presenceScript,
+            injectionTime: .atDocumentEnd,
+            forMainFrameOnly: true
+        ))
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
@@ -158,16 +206,14 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         super.init()
 
         configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.logoutMessageName)
+        configuration.userContentController.addScriptMessageHandler(self, contentWorld: .page, name: Self.presenceMessageName)
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
         #if os(iOS)
-        let refreshControl = UIRefreshControl()
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
-        webView.scrollView.refreshControl = refreshControl
-        // Pages shorter than the screen can be pulled too.
-        webView.scrollView.alwaysBounceVertical = true
         #endif
+        showPainting()
 
         // Search shows nothing until something is searched for.
         if tab != .search {
@@ -222,8 +268,37 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         webView.stopLoading()
     }
 
+    #if os(iOS)
+    private let refreshControl = UIRefreshControl()
+    #endif
+
     @objc private func refresh() {
         webView.reload()
+    }
+
+    /// In the painter a swipe from the edge or down from the top is a stroke, not a way off
+    /// the page.
+    private func showPainting() {
+        webView.allowsBackForwardNavigationGestures = !isPainting
+        #if os(iOS)
+        webView.scrollView.refreshControl = isPainting ? nil : refreshControl
+        // Pages shorter than the screen can be pulled too.
+        webView.scrollView.alwaysBounceVertical = !isPainting
+        #endif
+    }
+
+    private var isAskingToLeave = false
+
+    /// Whether the page may be left: at once, unless it holds a drawing that has not been
+    /// saved and the reader chooses to stay.
+    func mayLeave() async -> Bool {
+        guard !isAskingToLeave else { return false }
+        guard (try? await webView.evaluateJavaScript(Self.wouldLoseWorkScript)) as? Bool == true else {
+            return true
+        }
+        isAskingToLeave = true
+        defer { isAskingToLeave = false }
+        return await JavaScriptDialog.confirmLeaving(in: webView)
     }
 
     private func endRefreshing() {
@@ -258,6 +333,10 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         if isMainFrame && !(isWebURL && isSiteURL(url)) && url.scheme != "about" && url.scheme != "blob" && url.scheme != "data" {
             openOutside(url)
             return .cancel
+        }
+        if isMainFrame && isPainting {
+            let leave = await mayLeave()
+            if !leave { return .cancel }
         }
         return .allow
     }
@@ -353,7 +432,10 @@ final class WebTabController: NSObject, WKNavigationDelegate, WKUIDelegate, WKSc
         _ userContentController: WKUserContentController,
         didReceive message: WKScriptMessage
     ) async -> (Any?, String?) {
-        if message.name == Self.logoutMessageName {
+        if message.name == Self.presenceMessageName {
+            isPainting = (message.body as? String).map(Self.paintingActivities.contains) ?? false
+            showPainting()
+        } else if message.name == Self.logoutMessageName {
             Logger.info("WebTab: Signing out, unregistering push device first", category: Logger.auth)
             await PushNotificationService.shared.deleteDevice()
         }
@@ -509,6 +591,24 @@ enum JavaScriptDialog {
         guard response == .alertFirstButtonReturn else { return nil }
         return field?.stringValue ?? ""
     }
+
+    /// Whether the reader means to leave a page that holds something unsaved. Staying is
+    /// the default, so a reflexive Return keeps the drawing.
+    static func confirmLeaving(in webView: WKWebView) async -> Bool {
+        let alert = NSAlert()
+        alert.alertStyle = .warning
+        alert.messageText = "leave.title".localized
+        alert.informativeText = "leave.body".localized
+        alert.addButton(withTitle: "leave.stay".localized)
+        alert.addButton(withTitle: "leave.leave".localized)
+        let response: NSApplication.ModalResponse
+        if let window = webView.window {
+            response = await alert.beginSheetModal(for: window)
+        } else {
+            response = alert.runModal()
+        }
+        return response == .alertSecondButtonReturn
+    }
     #else
     static func present(message: String, in webView: WKWebView, kind: Kind) async -> String? {
         guard var presenter = webView.window?.rootViewController else { return nil }
@@ -533,6 +633,26 @@ enum JavaScriptDialog {
             alert.addAction(UIAlertAction(title: "common.ok".localized, style: .default) { [weak alert] _ in
                 continuation.resume(returning: alert?.textFields?.first?.text ?? "")
             })
+            presenter.present(alert, animated: true)
+        }
+    }
+
+    /// Whether the reader means to leave a page that holds something unsaved.
+    static func confirmLeaving(in webView: WKWebView) async -> Bool {
+        guard var presenter = webView.window?.rootViewController else { return true }
+        while let presented = presenter.presentedViewController {
+            presenter = presented
+        }
+        return await withCheckedContinuation { continuation in
+            let alert = UIAlertController(title: "leave.title".localized, message: "leave.body".localized, preferredStyle: .alert)
+            let stay = UIAlertAction(title: "leave.stay".localized, style: .cancel) { _ in
+                continuation.resume(returning: false)
+            }
+            alert.addAction(stay)
+            alert.addAction(UIAlertAction(title: "leave.leave".localized, style: .destructive) { _ in
+                continuation.resume(returning: true)
+            })
+            alert.preferredAction = stay
             presenter.present(alert, animated: true)
         }
     }
