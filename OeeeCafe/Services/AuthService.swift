@@ -1,54 +1,46 @@
 import Foundation
 import Combine
 
-/// Who is signed in on the site. Signing in and out happens on the web views; `WebSession`
-/// asks for a re-check whenever their cookies change.
+/// Whether someone is signed in on the site, as its pages say (`page.signedIn`, SiteBridge),
+/// and as the site answers once when the app opens.
+///
+/// Signing in and out happens on the web views, and every page with the toolbar says which
+/// it was rendered for, so the app asks nobody: it listens. The last word is remembered, so
+/// the app opens with the tabs it closed with rather than turning over once the first page
+/// has spoken.
 class AuthService: ObservableObject {
     static let shared = AuthService()
 
-    @Published var isAuthenticated: Bool = false
-    @Published var currentUser: CurrentUser?
+    private static let key = "signed_in"
 
-    private let apiClient = APIClient.shared
-    private var connectivity: AnyCancellable?
-    /// Whether the last check could not reach the site, and so said nothing either way.
-    private var checkMissed = false
+    @Published private(set) var isAuthenticated: Bool
 
     private init() {
-        // A check that could not be made is made again once it can.
-        connectivity = Connectivity.shared.restored.sink { [weak self] in
-            guard let self, self.checkMissed else { return }
-            Task { await self.checkAuthStatus() }
+        isAuthenticated = UserDefaults.standard.bool(forKey: Self.key)
+    }
+
+    /// Asks the site once, as the app opens, before any page has said. A page says as soon
+    /// as it loads, but only a site that sends bridge messages says anything: without this,
+    /// an app opened against one that does not -- a site deployed after the app, or a first
+    /// launch with nothing remembered -- shows the Login tab over a signed-in page for as
+    /// long as it runs. Offline, or any other answer, leaves what was remembered.
+    @MainActor
+    func checkOnce() async {
+        switch await APIClient.shared.status(path: "/api/v1/auth/me") {
+        case 200?:
+            pageSaid(signedIn: true)
+        case 401?, 403?:
+            pageSaid(signedIn: false)
+        default:
+            break
         }
     }
 
-    func checkAuthStatus() async {
-        Logger.debug("Checking auth status...", category: Logger.auth)
-
-        do {
-            let user: CurrentUser = try await apiClient.fetch(path: "/api/v1/auth/me")
-            Logger.debug("User authenticated - \(user.loginName)", category: Logger.auth)
-            currentUser = user
-            isAuthenticated = true
-            checkMissed = false
-        } catch APIError.networkError(let error) {
-            // Offline is not signed out: whoever was signed in still is.
-            guard !Task.isCancelled else { return }
-            Logger.warning("Auth check could not reach the site - \(error.localizedDescription)", category: Logger.auth)
-            checkMissed = true
-        } catch {
-            checkMissed = false
-            // A check cancelled for a newer one says nothing about who is signed in.
-            guard !Task.isCancelled else { return }
-            Logger.warning("Auth check failed - \(error.localizedDescription)", category: Logger.auth)
-            currentUser = nil
-            isAuthenticated = false
-        }
+    /// What a page said about who it was rendered for.
+    func pageSaid(signedIn: Bool) {
+        guard signedIn != isAuthenticated else { return }
+        Logger.info("AuthService: The site says \(signedIn ? "signed in" : "signed out")", category: Logger.auth)
+        isAuthenticated = signedIn
+        UserDefaults.standard.set(signedIn, forKey: Self.key)
     }
-}
-
-struct CurrentUser: Codable, Identifiable {
-    let id: String
-    let loginName: String
-    let displayName: String
 }

@@ -8,26 +8,12 @@ import UniformTypeIdentifiers
 /// the Photos app offers for a picture -- Save to Photos, Copy, Share -- with the post's link
 /// when the drawing is one. The site lets the press through only on drawings (ds.css, in
 /// oeee-cafe/web); everything else on its pages has no callout.
+///
+/// WebKit names the link a long press was on but not the image, and while it is working
+/// out the press the page cannot be asked: the answer would come after the finger had
+/// lifted. So the site says which drawing a finger is on as it lands (`pressed`,
+/// SiteBridge), and the menu is built from that.
 enum DrawingMenu {
-    /// Which drawing a finger is on, said as it lands. WebKit names the link a long press
-    /// was on but not the image, and while it is working out the press the page cannot be
-    /// asked: the answer would come after the finger had lifted.
-    static let pressScript = """
-    window.addEventListener('touchstart', function (event) {
-      var target = event.target;
-      var image = target && target.closest ? target.closest('img') : null;
-      var drawing = image && image.closest('.post-card-image, .post-stage-frame, .post-stage-replay') &&
-        !image.classList.contains('sensitive') ? image : null;
-      var link = drawing ? drawing.closest('a[href]') : null;
-      window.webkit.messageHandlers.oeeePressed.postMessage(drawing ? {
-        src: drawing.currentSrc || drawing.src,
-        link: link ? link.href : '',
-        width: drawing.naturalWidth || drawing.width,
-        height: drawing.naturalHeight || drawing.height
-      } : null);
-    }, { capture: true, passive: true });
-    """
-
     /// A pressed drawing. The menu has to answer while the finger is still down, so it is
     /// built from what the page knows at once, and the file follows.
     final class Drawing {
@@ -67,16 +53,13 @@ enum DrawingMenu {
         }
     }
 
-    /// The drawing a finger landed on, from what the page said (pressScript).
-    static func drawing(from message: Any, referrer: URL?) -> Drawing? {
-        guard let info = message as? [String: Any], let src = info["src"] as? String,
-              let url = URL(string: src) else { return nil }
-        let width = (info["width"] as? NSNumber)?.doubleValue ?? 0
-        let height = (info["height"] as? NSNumber)?.doubleValue ?? 0
+    /// The drawing a finger landed on, from what the page said.
+    static func drawing(from pressed: SiteMessage.Drawing, referrer: URL?) -> Drawing? {
+        guard let url = URL(string: pressed.src) else { return nil }
         return Drawing(
             url: url,
-            link: (info["link"] as? String).flatMap { $0.isEmpty ? nil : URL(string: $0) },
-            size: CGSize(width: width, height: height),
+            link: pressed.link.isEmpty ? nil : URL(string: pressed.link),
+            size: CGSize(width: pressed.width, height: pressed.height),
             referrer: referrer
         )
     }
@@ -188,8 +171,8 @@ enum DrawingMenu {
     }
 }
 
-/// What a press feels like: the site's controls name one (`data-haptic`, theme_head.jinja
-/// in oeee-cafe/web), and the app's own actions use the same names.
+/// What a press feels like: the site's controls name one (`haptic`, SiteBridge), and the
+/// app's own actions use the same names.
 enum Haptics {
     static func play(_ name: String) {
         switch name {

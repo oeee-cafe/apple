@@ -83,32 +83,22 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
     private func didFinishLaunching() {
         SentrySDK.start { options in
             options.dsn = "https://cb81dc57b22c71d2c1a789a8905ea6b6@o4504757655764992.ingest.us.sentry.io/4510413260193792"
-
-            // Adds IP for users.
-            // For more information, visit: https://docs.sentry.io/platforms/apple/data-management/data-collected/
-            options.sendDefaultPii = true
-
-            // Set tracesSampleRate to 1.0 to capture 100% of transactions for performance monitoring.
-            // We recommend adjusting this value in production.
+            // No IP addresses or other personal data with the reports: a crash is about
+            // the app, not about who was using it.
+            options.sendDefaultPii = false
             options.tracesSampleRate = 1.0
-
-            // Configure profiling. Visit https://docs.sentry.io/platforms/apple/profiling/ to learn more.
             options.configureProfiling = {
-                $0.sessionSampleRate = 1.0 // We recommend adjusting this value in production.
+                $0.sessionSampleRate = 1.0
                 $0.lifecycle = .trace
             }
-
+            // No screenshots or view hierarchies either: the screen is the site, and
+            // what it shows is someone's drawings, private communities included.
             #if os(iOS)
-            // Uncomment the following lines to add more data to your events
-            options.attachScreenshot = true // This adds a screenshot to the error events
-            options.attachViewHierarchy = true // This adds the view hierarchy to the error events
+            options.attachScreenshot = false
+            options.attachViewHierarchy = false
             #endif
-            
-            // Enable experimental logging features
             options.experimental.enableLogs = true
         }
-        // Remove the next line after confirming that your Sentry integration is working.
-        // SentrySDK.capture(message: "This app uses Sentry! :)")
 
         // Set notification delegate
         UNUserNotificationCenter.current().delegate = self

@@ -12,9 +12,8 @@ import Combine
 
 struct ContentView: View {
     @EnvironmentObject var authService: AuthService
-    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var webTabs = WebTabStore()
-    @StateObject private var badges = BadgeCounts()
+    @StateObject private var unread = UnreadCount.shared
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
     @State private var isReady = false
     @State private var tabSelection: WebTab = .home
@@ -60,12 +59,9 @@ struct ContentView: View {
             }
         }
         .task {
-            webTabs.onPageLoad = { [badges, authService] in
-                guard authService.isAuthenticated else { return }
-                Task { await badges.refresh() }
-            }
-            // Picks up whoever is signed in on the web views before showing any tab.
+            // Carries over a session signed in natively before showing any tab.
             await WebSession.shared.start()
+            Task { await AuthService.shared.checkOnce() }
             isReady = true
             await authenticationChanged(authService.isAuthenticated)
             openPendingNavigation()
@@ -77,11 +73,6 @@ struct ContentView: View {
                 tabSelection = .home
             }
             Task { await authenticationChanged(isAuthenticated) }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            if phase == .active && authService.isAuthenticated {
-                Task { await badges.refresh() }
-            }
         }
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
             openPendingNavigation()
@@ -97,7 +88,7 @@ struct ContentView: View {
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
             WebTabContent(controller: webTabs.controller(for: tab))
         }
-        .badge(badges.count(for: tab))
+        .badge(tab == .notifications ? unread.count : 0)
     }
 
     private func authenticationChanged(_ isAuthenticated: Bool) async {
@@ -105,9 +96,8 @@ struct ContentView: View {
             // Registers this device's push token for the signed-in user (asking for
             // permission the first time).
             await PushNotificationService.shared.requestPermissionsAndRegister()
-            await badges.refresh()
         } else {
-            badges.clear()
+            unread.clear()
         }
     }
 
@@ -152,36 +142,6 @@ struct WebTabContent: View {
             .defersSystemGestures(on: painting ? .all : [])
             .animation(.default, value: painting)
     }
-}
-
-/// Counts shown on the tab bar, read from the API as the signed-in user.
-final class BadgeCounts: ObservableObject {
-    @Published private var unreadNotifications = 0
-    @Published private var invitations = 0
-
-    func count(for tab: WebTab) -> Int {
-        switch tab {
-        case .notifications: return unreadNotifications + invitations
-        default: return 0
-        }
-    }
-
-    func refresh() async {
-        let api = APIClient.shared
-        async let unread: UnreadCount? = try? api.fetch(path: "/api/v1/notifications/unread-count")
-        async let invitations: Invitations? = try? api.fetch(path: "/api/v1/invitations")
-        if let unread = await unread { self.unreadNotifications = unread.count }
-        if let invitations = await invitations { self.invitations = invitations.invitations.count }
-    }
-
-    func clear() {
-        unreadNotifications = 0
-        invitations = 0
-    }
-
-    private struct Item: Decodable {}
-    private struct UnreadCount: Decodable { let count: Int }
-    private struct Invitations: Decodable { let invitations: [Item] }
 }
 
 #Preview {

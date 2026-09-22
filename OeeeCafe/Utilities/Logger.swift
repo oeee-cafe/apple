@@ -15,9 +15,6 @@ enum Logger {
     /// Logger for general app operations
     static let app = os.Logger(subsystem: subsystem, category: "app")
 
-    /// Logger for data operations
-    static let data = os.Logger(subsystem: subsystem, category: "data")
-
     /// Convenience methods for debug logging (only in DEBUG builds)
     static func debug(_ message: String, category: os.Logger = Logger.app) {
         #if DEBUG

@@ -42,11 +42,8 @@ final class Site: ObservableObject {
     /// Asks the page to carry out one of the site's commands. Going somewhere is the page's
     /// own navigation, so a page holding an unsaved drawing still asks before it is left.
     func command(_ name: String) {
-        var fallback = ""
-        if let path = Self.fallbacks[name], let url = URL(string: APIConfig.shared.baseURL + path) {
-            fallback = "location.href = \(Self.literal(url.absoluteString));"
-        }
-        evaluate("if (!(window.oeeeCommand && window.oeeeCommand(\(Self.literal(name))))) { \(fallback) }")
+        let fallback = Self.fallbacks[name].flatMap { URL(string: APIConfig.shared.baseURL + $0) }
+        evaluate(Scripts.siteCommand(name, fallback: fallback))
     }
 
     func back() { evaluate("history.back();") }
@@ -56,12 +53,6 @@ final class Site: ObservableObject {
 
     private func evaluate(_ script: String) {
         controller?.webView.evaluateJavaScript(script)
-    }
-
-    private static func literal(_ string: String) -> String {
-        let data = try? JSONSerialization.data(withJSONObject: [string])
-        let array = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
-        return String(array.dropFirst().dropLast())
     }
 
     // MARK: - Leaving
@@ -98,8 +89,9 @@ struct SiteView: View {
         .background(SiteWindowSetup())
         .frame(minWidth: 800, minHeight: 600)
         .task {
-            // Picks up whoever is signed in on the web views before showing the site.
+            // Carries over a session signed in natively before showing the site.
             await WebSession.shared.start()
+            Task { await AuthService.shared.checkOnce() }
             site.start()
             await authenticationChanged(authService.isAuthenticated)
             openPendingNavigation()
@@ -128,7 +120,7 @@ struct SiteView: View {
             // permission the first time).
             await PushNotificationService.shared.requestPermissionsAndRegister()
         } else {
-            NSApp.dockTile.badgeLabel = nil
+            UnreadCount.shared.clear()
         }
     }
 
@@ -237,77 +229,20 @@ enum SiteChrome {
 
     private static let messageName = "oeeeWindow"
 
-    /// Runs at the start of every page: tells the site where it is, makes room for the
-    /// traffic lights, lets the toolbar's empty space drag the window, and reports the
-    /// toolbar's unread count for the Dock. htmx replaces the body on boosted navigation,
-    /// so the count is read again whenever the document changes.
-    private static let script = """
-    (function () {
-      var root = document.documentElement;
-      root.setAttribute("data-desktop", "macos");
-      var style = document.createElement("style");
-      style.textContent = 'html[data-desktop="macos"] .nav-bar #menubar { padding-left: 96px; }';
-      (document.head || root).appendChild(style);
-      function post(message) {
-        window.webkit.messageHandlers.\(messageName).postMessage(message);
-      }
-      var unread = null;
-      function reportUnread() {
-        var bar = document.querySelector(".nav-bar");
-        if (!bar) return;
-        var badge = bar.querySelector("#nav-notifications .toolbar-badge");
-        var count = badge ? parseInt(badge.textContent, 10) || 0 : 0;
-        if (count === unread) return;
-        unread = count;
-        post({ unread: count });
-      }
-      document.addEventListener("DOMContentLoaded", reportUnread);
-      new MutationObserver(reportUnread).observe(root, { childList: true, subtree: true });
-      // The toolbar is the title bar: a press on its empty space moves the window, and a
-      // double click zooms it. Its links, buttons and fields stay the page's.
-      window.addEventListener("mousedown", function (event) {
-        if (event.button !== 0 || event.defaultPrevented) return;
-        var target = event.target;
-        if (!target || !target.closest || !target.closest(".nav-bar")) return;
-        if (target.closest("a, button, input, select, textarea, label, summary, details, [role], [contenteditable], [tabindex], [hx-get], [hx-post]")) return;
-        event.preventDefault();
-        post({ window: event.detail === 2 ? "zoom" : "drag" });
-      });
-    })();
-    """
+    /// What runs at the start of every page: the window's chrome (MacWindow.js), and a
+    /// right-click menu kept to where it is useful (QuietContextMenu.js).
+    static var userScripts: [WKUserScript] {
+        [Scripts.macWindow, Scripts.quietContextMenu].map { Scripts.atDocumentStart($0) }
+    }
 
-    /// The browser's own right-click menu -- Back, Reload, Open in New Window -- is the
-    /// plainest sign that a window is a browser, so it is kept to text fields, a selection
-    /// and images. Anywhere else a right click does nothing, unless the page has its own
-    /// use for it, as the painter does.
-    private static let quietContextMenu = """
-    window.addEventListener("contextmenu", function (event) {
-      if (event.defaultPrevented) return;
-      var target = event.target;
-      if (target && target.closest) {
-        if (target.closest("input, textarea, select, [contenteditable]")) return;
-        if (target.closest("img")) return;
-      }
-      if (window.getSelection && String(window.getSelection()) !== "") return;
-      event.preventDefault();
-    });
-    """
-
-    static func configure(_ configuration: WKWebViewConfiguration) {
-        let content = configuration.userContentController
-        for source in [script, quietContextMenu] {
-            content.addUserScript(WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true))
-        }
+    /// Hears the window's chrome ask to drag or zoom the window.
+    static func install(in content: WKUserContentController) {
         content.add(MessageHandler(), contentWorld: .page, name: messageName)
     }
 
     private final class MessageHandler: NSObject, WKScriptMessageHandler {
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let body = message.body as? [String: Any] else { return }
-            if let unread = body["unread"] as? Int {
-                NSApp.dockTile.badgeLabel = unread > 0 ? String(unread) : nil
-            }
-            guard let window = message.webView?.window else { return }
+            guard let body = message.body as? [String: Any], let window = message.webView?.window else { return }
             switch body["window"] as? String {
             case "drag":
                 // The press has gone to the page and back; drag if the button is still down.

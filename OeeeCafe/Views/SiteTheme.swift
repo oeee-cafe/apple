@@ -22,7 +22,8 @@ final class SiteTheme {
         choice = UserDefaults.standard.string(forKey: key)
     }
 
-    /// What a page says the reader chose (`data-theme`, or none for the system's).
+    /// What a page says the reader chose (`theme.choice`, SiteBridge): "light", "dark", or
+    /// "system" for the system's.
     func choose(_ theme: String?, in window: PlatformWindow?) {
         let theme = (theme == "light" || theme == "dark") ? theme : nil
         if theme != choice {
