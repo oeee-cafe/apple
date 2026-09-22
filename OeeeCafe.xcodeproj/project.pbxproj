@@ -8,7 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		09C5DAB0962A488A9425F647 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 0044112E41DC4707B652BA78 /* Sentry */; };
-		C7D3A1F92EB2D5DB00FB7F92 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = C7KINGF12EB22DD8008D4A6F /* Kingfisher */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,7 +27,6 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C7D3A1F92EB2D5DB00FB7F92 /* Kingfisher in Frameworks */,
 				09C5DAB0962A488A9425F647 /* Sentry in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -73,7 +71,6 @@
 			);
 			name = OeeeCafe;
 			packageProductDependencies = (
-				C7KINGF12EB22DD8008D4A6F /* Kingfisher */,
 				0044112E41DC4707B652BA78 /* Sentry */,
 			);
 			productName = OeeeCafe;
@@ -108,7 +105,6 @@
 			mainGroup = C73E61912EB22DD8008D4A6F;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				C7KINGF02EB22DD8008D4A6F /* XCRemoteSwiftPackageReference "Kingfisher" */,
 				DDAB754BECDF433CB6930C19 /* XCRemoteSwiftPackageReference "sentry-cocoa" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -440,14 +436,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		C7KINGF02EB22DD8008D4A6F /* XCRemoteSwiftPackageReference "Kingfisher" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/onevcat/Kingfisher.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 8.6.0;
-			};
-		};
 		DDAB754BECDF433CB6930C19 /* XCRemoteSwiftPackageReference "sentry-cocoa" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/getsentry/sentry-cocoa/";
@@ -463,11 +451,6 @@
 			isa = XCSwiftPackageProductDependency;
 			package = DDAB754BECDF433CB6930C19 /* XCRemoteSwiftPackageReference "sentry-cocoa" */;
 			productName = Sentry;
-		};
-		C7KINGF12EB22DD8008D4A6F /* Kingfisher */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = C7KINGF02EB22DD8008D4A6F /* XCRemoteSwiftPackageReference "Kingfisher" */;
-			productName = Kingfisher;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

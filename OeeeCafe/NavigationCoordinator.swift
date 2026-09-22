@@ -1,66 +1,47 @@
 import Foundation
-import SwiftUI
 import Combine
 
 /// Coordinator for handling deep link navigation from push notifications and other sources
 class NavigationCoordinator: ObservableObject {
     static let shared = NavigationCoordinator()
 
-    @Published var selectedTab: String = "home"
-    @Published var navigationPath = NavigationPath()
+    /// A page to open from outside the app (a push notification), and the tab to open it in.
     @Published var pendingNavigation: PendingNavigation?
 
     private init() {}
 
-    enum PendingNavigation: Equatable {
-        case post(id: String)
-        case profile(loginName: String)
-        case community(slug: String)
-        case communityMembers(slug: String)
-        case invitations
-        case notifications
+    struct PendingNavigation: Equatable {
+        let tab: WebTab
+        let path: String
+
+        var url: URL? {
+            URL(string: APIConfig.shared.baseURL + path)
+        }
+    }
+
+    private func navigate(to path: String, in tab: WebTab) {
+        Logger.debug("NavigationCoordinator: Navigating to \(path) in \(tab.rawValue) tab", category: Logger.app)
+        pendingNavigation = PendingNavigation(tab: tab, path: path)
     }
 
     /// Navigate to a post detail screen
     func navigateToPost(id: String) {
-        Logger.debug("NavigationCoordinator: Navigating to post \(id)", category: Logger.app)
-        pendingNavigation = .post(id: id)
-        selectedTab = "home"
+        navigate(to: "/posts/\(id)", in: .home)
     }
 
     /// Navigate to a user profile screen
     func navigateToProfile(loginName: String) {
-        Logger.debug("NavigationCoordinator: Navigating to profile @\(loginName)", category: Logger.app)
-        pendingNavigation = .profile(loginName: loginName)
-        selectedTab = "home"
-    }
-
-    /// Navigate to a community detail screen
-    func navigateToCommunity(slug: String) {
-        Logger.debug("NavigationCoordinator: Navigating to community @\(slug)", category: Logger.app)
-        pendingNavigation = .community(slug: slug)
-        selectedTab = "communities"
+        navigate(to: "/@\(loginName)", in: .home)
     }
 
     /// Navigate to community members screen
     func navigateToCommunityMembers(slug: String) {
-        Logger.debug("NavigationCoordinator: Navigating to community @\(slug) members", category: Logger.app)
-        pendingNavigation = .communityMembers(slug: slug)
-        selectedTab = "communities"
+        navigate(to: "/communities/@\(slug)/members", in: .communities)
     }
 
-    /// Navigate to community invitations screen
-    func navigateToInvitations() {
-        Logger.debug("NavigationCoordinator: Navigating to invitations", category: Logger.app)
-        pendingNavigation = .invitations
-        selectedTab = "communities"
-    }
-
-    /// Navigate to notifications tab
+    /// Navigate to notifications tab, where community invitations are listed too
     func navigateToNotifications() {
-        Logger.debug("NavigationCoordinator: Navigating to notifications tab", category: Logger.app)
-        pendingNavigation = .notifications
-        selectedTab = "notifications"
+        navigate(to: WebTab.notifications.path, in: .notifications)
     }
 
     /// Handle push notification payload and navigate to the appropriate screen
@@ -100,8 +81,8 @@ class NavigationCoordinator: ObservableObject {
             }
 
         case "community_invite":
-            // Navigate to community invitations screen
-            navigateToInvitations()
+            // Invitations are listed on the notifications page
+            navigateToNotifications()
 
         case "invitation_accepted", "invitation_declined":
             // Navigate to community members screen
