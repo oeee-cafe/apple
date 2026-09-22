@@ -5,6 +5,7 @@ import WebKit
 import AppKit
 #else
 import UIKit
+import SafariServices
 #endif
 
 /// A tab of the native tab bar, each showing its own page of the site.
@@ -367,11 +368,33 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         #endif
     }
 
+    /// Another site, or another kind of link. On the Mac, the reader's browser. On iOS a web
+    /// page goes to the app that claims it, if one is installed, and otherwise opens in a
+    /// Safari sheet over this one, with Done to come back; mail, phone and the like go to
+    /// the system.
     private func openOutside(_ url: URL) {
         #if os(macOS)
         NSWorkspace.shared.open(url)
         #else
-        UIApplication.shared.open(url)
+        guard url.scheme == "http" || url.scheme == "https" else {
+            UIApplication.shared.open(url)
+            return
+        }
+        Task {
+            if await UIApplication.shared.open(url, options: [.universalLinksOnly: true]) {
+                return
+            }
+            guard var presenter = webView.window?.rootViewController else {
+                await UIApplication.shared.open(url)
+                return
+            }
+            while let presented = presenter.presentedViewController {
+                presenter = presented
+            }
+            let safari = SFSafariViewController(url: url)
+            safari.dismissButtonStyle = .done
+            presenter.present(safari, animated: true)
+        }
         #endif
     }
 
