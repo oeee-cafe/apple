@@ -22,6 +22,8 @@ class AuthService: ObservableObject {
             currentUser = user
             isAuthenticated = true
         } catch {
+            // A check cancelled for a newer one says nothing about who is signed in.
+            guard !Task.isCancelled else { return }
             Logger.warning("Auth check failed - \(error.localizedDescription)", category: Logger.auth)
             currentUser = nil
             isAuthenticated = false

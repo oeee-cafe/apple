@@ -61,8 +61,12 @@ final class WebSession: NSObject, WKHTTPCookieStoreObserver {
             .sorted()
             .joined(separator: ";")
         guard signature != lastSignature else { return }
-        lastSignature = signature
         Logger.debug("WebSession: Cookies changed, checking auth status", category: Logger.auth)
         await AuthService.shared.checkAuthStatus()
+        // Signing in sets the session cookie again on the page it lands on, and that
+        // change cancels this check. Leave the cookies unchecked so the next sync redoes it.
+        if !Task.isCancelled {
+            lastSignature = signature
+        }
     }
 }
