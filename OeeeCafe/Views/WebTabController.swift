@@ -132,6 +132,13 @@ final class WebTabController: NSObject, ObservableObject {
         webView.load(URLRequest(url: url))
     }
 
+    /// Shows `url`, unless the page showing is already it: a tab stepped into keeps where
+    /// the reader was in it.
+    func show(_ url: URL) {
+        guard !hasLoaded || webView.url != url else { return }
+        load(url)
+    }
+
     /// Tries the page that could not be reached again.
     func retry() {
         isUnreachable = false
@@ -287,7 +294,33 @@ final class WebTabController: NSObject, ObservableObject {
         if trusted, let signedIn = page.signedIn {
             AuthService.shared.pageSaid(signedIn: signedIn)
         }
+
+        #if os(iOS)
+        showSection(page.path)
+        #endif
     }
+
+    #if os(iOS)
+    /// A tab's own page arriving in another tab -- the site's toolbar has the sections of
+    /// the tab bar in it, and swaps one in wherever it is tapped -- moves the reader to the
+    /// tab it belongs to, and this tab back to the page it was showing. The two ways to a
+    /// section, the tab bar and the toolbar, then never say different things about where
+    /// the reader is. (The Mac has no tabs: there the toolbar is the only way.)
+    private func showSection(_ path: String) {
+        guard let owner = WebTab.owning(path: path), owner != tab,
+              WebTab.visible(isAuthenticated: AuthService.shared.isAuthenticated).contains(owner)
+        else { return }
+        Logger.debug("WebTab \(tab.rawValue): \(path) is the \(owner.rawValue) tab's own page", category: Logger.app)
+        NavigationCoordinator.shared.show(section: owner)
+        // The toolbar's link was boosted: the section is in this web view already, and its
+        // history entry with it, so the way back to the page under it is the way back.
+        if webView.canGoBack {
+            webView.goBack()
+        } else {
+            load(tab.rootURL)
+        }
+    }
+    #endif
 
     /// In the painter a swipe from the edge or down from the top is a stroke, not a way off
     /// the page; and a page the site says may not be reloaded is not pulled down to reload.

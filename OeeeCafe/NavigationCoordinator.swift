@@ -14,6 +14,10 @@ class NavigationCoordinator: ObservableObject {
     struct PendingNavigation: Equatable {
         let tab: WebTab
         let path: String
+        /// Whether the page is to be fetched again. A page opened from outside the app is
+        /// what the reader came for, and is shown afresh; a section they stepped into from
+        /// another tab is left as its tab had it, where they were in it and all.
+        var fresh = true
 
         var url: URL? {
             URL(string: APIConfig.shared.baseURL + path)
@@ -25,6 +29,13 @@ class NavigationCoordinator: ObservableObject {
         let tab = WebTab.showing(path: URLComponents(string: path)?.path ?? path)
         Logger.debug("NavigationCoordinator: Opening \(path) in \(tab.rawValue) tab", category: Logger.app)
         pendingNavigation = PendingNavigation(tab: tab, path: path)
+    }
+
+    /// A section of the site with a tab of its own, reached from another tab: the reader
+    /// is taken to the tab it is, which shows it already or is sent to it.
+    func show(section tab: WebTab) {
+        Logger.debug("NavigationCoordinator: Showing the \(tab.rawValue) tab, its own section", category: Logger.app)
+        pendingNavigation = PendingNavigation(tab: tab, path: tab.path, fresh: false)
     }
 
     /// A link to the site from outside the app.

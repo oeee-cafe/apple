@@ -106,7 +106,12 @@ struct ContentView: View {
         navigationCoordinator.clearPendingNavigation()
         guard visibleTabs.contains(pending.tab), let url = pending.url else { return }
         tabSelection = pending.tab
-        webTabs.controller(for: pending.tab).load(url)
+        let controller = webTabs.controller(for: pending.tab)
+        if pending.fresh {
+            controller.load(url)
+        } else {
+            controller.show(url)
+        }
     }
 }
 
