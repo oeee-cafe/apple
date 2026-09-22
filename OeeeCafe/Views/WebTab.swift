@@ -164,6 +164,39 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
     """
     #endif
 
+    #if os(iOS)
+    /// The reader's text size (Dynamic Type), as a multiple of the system's default body
+    /// size, for the site's type scale to follow (--oeee-text-scale, ds.css in
+    /// oeee-cafe/web). Kept within what its layouts were drawn for: the largest
+    /// accessibility sizes stop at twice the default.
+    private static var textScale: Double {
+        let traits = UITraitCollection(preferredContentSizeCategory: UIApplication.shared.preferredContentSizeCategory)
+        let body = UIFontMetrics(forTextStyle: .body).scaledValue(for: 17, compatibleWith: traits)
+        return min(max(body / 17, 0.8), 2)
+    }
+
+    private static func textScaleSource(_ scale: Double) -> String {
+        "document.documentElement.style.setProperty('--oeee-text-scale', '\(scale)');"
+    }
+
+    private var textScaleScript: WKUserScript?
+    private var textSizeObserver: NSObjectProtocol?
+
+    /// Puts the reader's text size on every page from its first paint, and on the page
+    /// showing now when the reader changes it.
+    private func showTextScale() {
+        let source = Self.textScaleSource(Self.textScale)
+        let content = webView.configuration.userContentController
+        let others = content.userScripts.filter { $0 !== textScaleScript }
+        let script = WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        content.removeAllUserScripts()
+        content.addUserScript(script)
+        others.forEach(content.addUserScript)
+        textScaleScript = script
+        webView.evaluateJavaScript(source)
+    }
+    #endif
+
     /// The activities that are the painter; watching a replay is not.
     private static let paintingActivities: Set<String> = ["drawing", "relaying", "drawing-banner", "collaborating"]
 
@@ -279,6 +312,14 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         #endif
         showPainting()
+        #if os(iOS)
+        showTextScale()
+        textSizeObserver = NotificationCenter.default.addObserver(
+            forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.showTextScale() }
+        }
+        #endif
         connectivity = Connectivity.shared.restored.sink { [weak self] in
             guard let self, self.isUnreachable else { return }
             self.retry()
