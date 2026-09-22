@@ -58,7 +58,15 @@ final class WebTabController: NSObject, ObservableObject {
         configuration.allowsInlineMediaPlayback = true
         #endif
         #if os(macOS)
-        configuration.applicationNameForUserAgent = "OeeeCafeMac"
+        // The site knows the Mac app by this (`data-mac-app`, theme_head.jinja in
+        // oeee-cafe/web) -- and, where the build has a client id to sign in with,
+        // that it does Google itself rather than in the web view, which Google
+        // refuses. A build without one says nothing and is shown no button.
+        var userAgent = "OeeeCafeMac"
+        if GoogleSignIn.isAvailable {
+            userAgent += " \(GoogleSignIn.userAgentToken)"
+        }
+        configuration.applicationNameForUserAgent = userAgent
         userScripts = SiteChrome.userScripts
         SiteChrome.install(in: configuration.userContentController)
         #else

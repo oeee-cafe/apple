@@ -40,13 +40,11 @@ extension WebTabController: WKNavigationDelegate {
         #endif
     }
 
-    #if os(iOS)
     /// Where a sign-in link says to go on to afterwards (`?next=`).
     private static func next(from url: URL) -> String? {
         URLComponents(url: url, resolvingAgainstBaseURL: false)?
             .queryItems?.first(where: { $0.name == "next" })?.value
     }
-    #endif
 
     /// Whether a failed load is the site being out of reach -- no network, no answer --
     /// rather than a load the app or the page called off.
@@ -70,18 +68,19 @@ extension WebTabController: WKNavigationDelegate {
         }
         #if os(iOS)
         // Apple's sign-in page would open in Safari, away from this web view's session;
-        // the app signs in with Apple's own sheet instead.
+        // the app signs in with Apple's own sheet instead. Not on the Mac, where the
+        // page opens in this web view and comes back to the same cookie jar.
         if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
             Task { await AppleSignIn.signIn(in: webView, next: Self.next(from: url)) }
             return .cancel
         }
-        // Google's, which Google refuses in a web view at all: it signs in in a browser
-        // of the system's instead (GoogleSignIn).
+        #endif
+        // Google's, which Google refuses in a web view at all, on either platform: it
+        // signs in in a browser of the system's instead (GoogleSignIn).
         if isMainFrame && GoogleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
             Task { await GoogleSignIn.signIn(in: webView, next: Self.next(from: url)) }
             return .cancel
         }
-        #endif
         if isMainFrame && isPainting {
             let leave = await mayLeave()
             if !leave { return .cancel }

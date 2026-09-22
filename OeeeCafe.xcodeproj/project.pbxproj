@@ -317,6 +317,7 @@
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_FILE[sdk=iphoneos*]" = "OeeeCafe-iOS-Info.plist";
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "OeeeCafe-iOS-Info.plist";
+				"INFOPLIST_FILE[sdk=macosx*]" = "OeeeCafe-macOS-Info.plist";
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -390,6 +391,7 @@
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_FILE[sdk=iphoneos*]" = "OeeeCafe-iOS-Info.plist";
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "OeeeCafe-iOS-Info.plist";
+				"INFOPLIST_FILE[sdk=macosx*]" = "OeeeCafe-macOS-Info.plist";
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphoneos*]" = UIStatusBarStyleDefault;
 				"INFOPLIST_KEY_UIStatusBarStyle[sdk=iphonesimulator*]" = UIStatusBarStyleDefault;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";

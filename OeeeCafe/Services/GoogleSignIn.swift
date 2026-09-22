@@ -1,17 +1,22 @@
-#if os(iOS)
 import AuthenticationServices
 import CryptoKit
-import UIKit
 import WebKit
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
-/// Sign in with Google, for the site in a web view.
+/// Sign in with Google, for the site in a web view, on iOS and on the Mac alike.
 ///
 /// The site's "Sign in with Google" is a link to `/auth/google`, which in a browser goes to
 /// Google's page and back. Google refuses its own sign-in pages inside an embedded web view
-/// (`disallowed_useragent`), and even if it did not, that page would open in Safari, away
-/// from the web view's session. So the tab stops the link (WebTabController+Navigation.swift)
+/// (`disallowed_useragent`). So the tab stops the link (WebTabController+Navigation.swift)
 /// and signs in here, in `ASWebAuthenticationSession` -- a browser of the system's, which is
 /// what Google asks an app to use, and which the person's Safari sign-ins are already in.
+///
+/// The Mac app is the same web view with the same bundle id, so it signs in against the same
+/// OAuth client and takes the same path; only the window the sheet hangs from differs.
 ///
 /// 1. the page asks the site for a state and a nonce (`POST /auth/google/start`), which the
 ///    site keeps in the web view's session;
@@ -262,10 +267,11 @@ enum GoogleSignIn {
 
     /// One `ASWebAuthenticationSession`, as an async call. Holds itself until it answers.
     private final class Authorization: NSObject, ASWebAuthenticationPresentationContextProviding {
-        private let anchor: UIWindow?
+        /// `UIWindow` on iOS, `NSWindow` on the Mac; `webView.window` is each.
+        private let anchor: ASPresentationAnchor?
         private var session: ASWebAuthenticationSession?
 
-        init(anchor: UIWindow?) {
+        init(anchor: ASPresentationAnchor?) {
             self.anchor = anchor
         }
 
@@ -296,4 +302,3 @@ enum GoogleSignIn {
         }
     }
 }
-#endif
