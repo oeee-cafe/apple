@@ -94,9 +94,16 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
     /// not left without asking.
     @Published private(set) var isPainting = false
     /// Whether a page has finished loading, so the web view has a ground of its own.
-    private(set) var hasLoaded = false
-    /// Called when a page could not be loaded at all, as when the site cannot be reached.
-    var onLoadFailed: ((Error) -> Void)?
+    @Published private(set) var hasLoaded = false
+    /// Whether the site could not be reached with nothing yet to show (UnreachableView).
+    @Published private(set) var isUnreachable = false
+    /// Whether to say, for a moment, that a page could not be reached while another was
+    /// showing, which stays (the notice in Unreachable.swift).
+    @Published private(set) var isMissingPage = false
+    private var missingPageShown: Task<Void, Never>?
+    /// The page last asked for, to ask for again.
+    private var requestedURL: URL?
+    private var connectivity: AnyCancellable?
 
     private static let logoutMessageName = "oeeeLogout"
     private static let presenceMessageName = "oeeePresence"
@@ -271,15 +278,33 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         #endif
         showPainting()
+        connectivity = Connectivity.shared.restored.sink { [weak self] in
+            guard let self, self.isUnreachable else { return }
+            self.retry()
+        }
 
         // Search shows nothing until something is searched for.
         if tab != .search {
-            webView.load(URLRequest(url: tab.rootURL))
+            load(tab.rootURL)
         }
     }
 
     func load(_ url: URL) {
+        requestedURL = url
         webView.load(URLRequest(url: url))
+    }
+
+    /// Tries the page that could not be reached again.
+    func retry() {
+        isUnreachable = false
+        load(requestedURL ?? webView.url ?? tab.rootURL)
+    }
+
+    /// Whether a failed load is the site being out of reach -- no network, no answer --
+    /// rather than a load the app or the page called off.
+    private static func isUnreachable(_ error: Error) -> Bool {
+        let error = error as NSError
+        return error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled
     }
 
     /// Shows the site's results for `query` (`/search?q=`).
@@ -421,11 +446,15 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
             let leave = await mayLeave()
             if !leave { return .cancel }
         }
+        if isMainFrame {
+            requestedURL = url
+        }
         return .allow
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         hasLoaded = true
+        isUnreachable = false
         endRefreshing()
         onPageLoad?()
     }
@@ -436,7 +465,22 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         endRefreshing()
-        onLoadFailed?(error)
+        if Self.isUnreachable(error) {
+            if hasLoaded {
+                // The page that was left stays; the skeleton the site put up for the next one
+                // (toolbar.jinja) comes down at once rather than after its own timeout.
+                webView.evaluateJavaScript("window.oeeeRestoreContent && window.oeeeRestoreContent();")
+                isMissingPage = true
+                missingPageShown?.cancel()
+                missingPageShown = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(3))
+                    guard !Task.isCancelled else { return }
+                    self?.isMissingPage = false
+                }
+            } else {
+                isUnreachable = true
+            }
+        }
         Logger.warning("WebTab \(tab.rawValue): Failed to load - \(error.localizedDescription)", category: Logger.network)
     }
 
@@ -578,6 +622,7 @@ struct SearchTabView: View {
             ZStack {
                 WebTabView(controller: controller)
                     .ignoresSafeArea(.container)
+                    .unreachable(controller)
                 if !hasSearched {
                     ContentUnavailableView("tab.search".localized, systemImage: "magnifyingglass")
                         .background(.background)

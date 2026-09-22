@@ -145,6 +145,7 @@ struct WebTabContent: View {
         let painting = controller.isPainting
         WebTabView(controller: controller)
             .ignoresSafeArea(.container)
+            .unreachable(controller)
             .toolbar(painting ? .hidden : .automatic, for: .tabBar)
             .statusBarHidden(painting)
             .persistentSystemOverlays(painting ? .hidden : .automatic)

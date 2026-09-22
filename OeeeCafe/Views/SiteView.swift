@@ -15,41 +15,18 @@ import AppKit
 final class Site: ObservableObject {
     static let shared = Site()
 
-    enum State {
-        case connecting
-        case shown
-        case unreachable
-    }
-
-    @Published private(set) var state: State = .connecting
-    private(set) var controller: WebTabController?
+    @Published private(set) var controller: WebTabController?
 
     private init() {}
 
     /// Makes the web view once whoever is signed in on the web views has been picked up.
     func start() {
         guard controller == nil else { return }
-        let controller = WebTabController(tab: .home)
-        controller.onPageLoad = { [weak self] in self?.state = .shown }
-        controller.onLoadFailed = { [weak self] error in
-            guard let self, self.state != .shown, Self.isUnreachable(error) else { return }
-            self.state = .unreachable
-        }
-        self.controller = controller
-    }
-
-    func retry() {
-        state = .connecting
-        controller?.load(WebTab.home.rootURL)
+        controller = WebTabController(tab: .home)
     }
 
     func load(_ url: URL) {
         controller?.load(url)
-    }
-
-    private static func isUnreachable(_ error: Error) -> Bool {
-        let error = error as NSError
-        return error.domain == NSURLErrorDomain && error.code != NSURLErrorCancelled
     }
 
     // MARK: - Commands
@@ -112,28 +89,9 @@ struct SiteView: View {
         ZStack {
             Color(nsColor: SiteChrome.ground)
             if let controller = site.controller {
-                WebTabView(controller: controller)
-                    .opacity(site.state == .shown ? 1 : 0)
-            }
-            switch site.state {
-            case .connecting:
-                ProgressView()
-                    .controlSize(.large)
-                    .accessibilityLabel("site.connecting".localized)
-            case .unreachable:
-                VStack(spacing: 8) {
-                    Text("site.unreachable_title".localized)
-                        .font(.headline)
-                    Text("site.unreachable_body".localized)
-                        .foregroundStyle(.secondary)
-                    Button("site.retry".localized) { site.retry() }
-                        .keyboardShortcut(.defaultAction)
-                        .padding(.top, 8)
-                }
-                .multilineTextAlignment(.center)
-                .padding()
-            case .shown:
-                EmptyView()
+                SitePage(controller: controller)
+            } else {
+                connecting
             }
         }
         .ignoresSafeArea()
@@ -158,6 +116,12 @@ struct SiteView: View {
         }
     }
 
+    private var connecting: some View {
+        ProgressView()
+            .controlSize(.large)
+            .accessibilityLabel("site.connecting".localized)
+    }
+
     private func authenticationChanged(_ isAuthenticated: Bool) async {
         if isAuthenticated {
             // Registers this Mac's push token for the signed-in user (asking for
@@ -173,6 +137,25 @@ struct SiteView: View {
         navigationCoordinator.clearPendingNavigation()
         if let url = pending.url {
             site.load(url)
+        }
+    }
+}
+
+/// The page, once it has arrived; until then NEO's ground and a spinner, or the words for
+/// a site that could not be reached.
+private struct SitePage: View {
+    @ObservedObject var controller: WebTabController
+
+    var body: some View {
+        ZStack {
+            WebTabView(controller: controller)
+                .opacity(controller.hasLoaded ? 1 : 0)
+                .unreachable(controller)
+            if !controller.hasLoaded && !controller.isUnreachable {
+                ProgressView()
+                    .controlSize(.large)
+                    .accessibilityLabel("site.connecting".localized)
+            }
         }
     }
 }
