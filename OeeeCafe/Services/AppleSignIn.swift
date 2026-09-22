@@ -1,0 +1,180 @@
+#if os(iOS)
+import AuthenticationServices
+import UIKit
+import WebKit
+
+/// Sign in with Apple, natively, for the site in a web view.
+///
+/// The site's "Sign in with Apple" is a link to `/auth/apple`, which in a browser goes to
+/// Apple's page and back. Here that would open Apple's page in Safari, away from the web
+/// view's session, so the tab stops the link (WebTab.swift) and signs in here instead:
+///
+/// 1. the page asks the site for a state and a nonce (`POST /auth/apple/start`), which the
+///    site keeps in the web view's session;
+/// 2. Apple's own sheet signs in with that nonce and answers with an ID token;
+/// 3. the page posts the token and the state to `/auth/apple`, as Apple's page would have,
+///    and the site checks both against the session and signs in (src/apple.rs and
+///    src/web/handlers/identity.rs in oeee-cafe/web).
+///
+/// Everything the site is asked is asked by the page, so it carries the page's cookie and
+/// origin; the app never holds the session itself.
+@MainActor
+enum AppleSignIn {
+    /// Said in the user agent, so the site shows its button (theme_head.jinja in
+    /// oeee-cafe/web). An app without this would follow the link to Apple's page.
+    static let userAgentToken = "SignInWithApple"
+
+    /// Whether `url` is the site's link to sign in with Apple.
+    static func isSignInLink(_ navigationAction: WKNavigationAction, site: URL) -> Bool {
+        guard let url = navigationAction.request.url else { return false }
+        return url.host == site.host
+            && url.path == "/auth/apple"
+            && (navigationAction.request.httpMethod ?? "GET") == "GET"
+    }
+
+    /// Signs in with Apple for the page in `webView`, going on to `next` afterwards.
+    static func signIn(in webView: WKWebView, next: String?) async {
+        guard let started = await start(in: webView, next: next) else {
+            Logger.warning("AppleSignIn: The site did not start a sign-in", category: Logger.auth)
+            return
+        }
+
+        let request = ASAuthorizationAppleIDProvider().createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = started.nonce
+
+        let credential: ASAuthorizationAppleIDCredential
+        do {
+            credential = try await Authorization(anchor: webView.window).perform(request)
+        } catch let error as ASAuthorizationError where error.code == .canceled {
+            // Put away without signing in: the page stays as it was.
+            return
+        } catch {
+            Logger.warning("AppleSignIn: Apple did not sign in - \(error.localizedDescription)", category: Logger.auth)
+            // The site says it could not confirm who this is, in the page's own words.
+            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
+            return
+        }
+
+        guard let token = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }) else {
+            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
+            return
+        }
+        var fields = ["state": started.state, "id_token": token]
+        if let user = userField(credential.fullName) {
+            fields["user"] = user
+        }
+        await answer(in: webView, fields: fields)
+    }
+
+    private struct Started {
+        let state: String
+        let nonce: String
+    }
+
+    /// Asks the site, from the page, for this sign-in's state and nonce.
+    private static func start(in webView: WKWebView, next: String?) async -> Started? {
+        let script = """
+        const body = new URLSearchParams();
+        if (next) body.set("next", next);
+        const response = await fetch("/auth/apple/start", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        });
+        if (!response.ok) return null;
+        return await response.json();
+        """
+        let result = try? await webView.callAsyncJavaScript(
+            script,
+            arguments: ["next": next ?? NSNull()],
+            in: nil,
+            contentWorld: .defaultClient
+        )
+        guard let answer = result as? [String: Any],
+              let state = answer["state"] as? String,
+              let nonce = answer["nonce"] as? String
+        else { return nil }
+        return Started(state: state, nonce: nonce)
+    }
+
+    /// Posts Apple's answer to `/auth/apple` from the page, which the site takes it from.
+    private static func answer(in webView: WKWebView, fields: [String: String]) async {
+        let script = """
+        const form = document.createElement("form");
+        form.method = "post";
+        form.action = "/auth/apple";
+        form.style.display = "none";
+        for (const [name, value] of Object.entries(fields)) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        """
+        _ = try? await webView.callAsyncJavaScript(
+            script,
+            arguments: ["fields": fields],
+            in: nil,
+            contentWorld: .defaultClient
+        )
+    }
+
+    /// The person's name as Apple's page would post it (`{"name": {"firstName", "lastName"}}`),
+    /// for a new account's display name. Apple gives it the first time only.
+    private static func userField(_ name: PersonNameComponents?) -> String? {
+        guard let name else { return nil }
+        var parts: [String: String] = [:]
+        if let given = name.givenName, !given.isEmpty { parts["firstName"] = given }
+        if let family = name.familyName, !family.isEmpty { parts["lastName"] = family }
+        guard !parts.isEmpty,
+              let data = try? JSONSerialization.data(withJSONObject: ["name": parts])
+        else { return nil }
+        return String(data: data, encoding: .utf8)
+    }
+
+    /// One ASAuthorizationController run, as an async call. Holds itself until Apple answers.
+    private final class Authorization: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+        private let anchor: UIWindow?
+        private var controller: ASAuthorizationController?
+        private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
+
+        init(anchor: UIWindow?) {
+            self.anchor = anchor
+        }
+
+        func perform(_ request: ASAuthorizationAppleIDRequest) async throws -> ASAuthorizationAppleIDCredential {
+            try await withCheckedThrowingContinuation { continuation in
+                self.continuation = continuation
+                let controller = ASAuthorizationController(authorizationRequests: [request])
+                controller.delegate = self
+                controller.presentationContextProvider = self
+                self.controller = controller
+                controller.performRequests()
+            }
+        }
+
+        func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+            anchor ?? ASPresentationAnchor()
+        }
+
+        func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+            if let credential = authorization.credential as? ASAuthorizationAppleIDCredential {
+                continuation?.resume(returning: credential)
+            } else {
+                continuation?.resume(throwing: ASAuthorizationError(.unknown))
+            }
+            continuation = nil
+        }
+
+        func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+            continuation?.resume(throwing: error)
+            continuation = nil
+        }
+    }
+}
+#endif

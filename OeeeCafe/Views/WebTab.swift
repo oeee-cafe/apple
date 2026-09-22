@@ -219,8 +219,9 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
         SiteChrome.configure(configuration)
         #else
         // The site knows the app by this, and leaves search and scrolling to iOS
-        // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web).
-        configuration.applicationNameForUserAgent = "OeeeCafeiOS"
+        // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web) -- and signing in with
+        // Apple, which the app does itself (AppleSignIn).
+        configuration.applicationNameForUserAgent = "OeeeCafeiOS \(AppleSignIn.userAgentToken)"
         #endif
         configuration.userContentController.addUserScript(WKUserScript(
             source: Self.logoutScript,
@@ -442,6 +443,16 @@ final class WebTabController: NSObject, ObservableObject, WKNavigationDelegate, 
             openOutside(url)
             return .cancel
         }
+        #if os(iOS)
+        // Apple's sign-in page would open in Safari, away from this web view's session;
+        // the app signs in with Apple's own sheet instead.
+        if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
+            let next = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?.first(where: { $0.name == "next" })?.value
+            Task { await AppleSignIn.signIn(in: webView, next: next) }
+            return .cancel
+        }
+        #endif
         if isMainFrame && isPainting {
             let leave = await mayLeave()
             if !leave { return .cancel }
