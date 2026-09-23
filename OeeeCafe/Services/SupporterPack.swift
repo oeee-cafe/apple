@@ -11,13 +11,16 @@ import WebKit
 /// those messages rather than being built in: a pack is a year's, and the year
 /// it sells is the site's to decide without a release of this app.
 ///
-/// What this never does is tell the site that something was bought. It hands
-/// over the transaction id and the site takes that to Apple itself
-/// (src/app_store.rs in oeee-cafe/web); a page cannot be trusted about a
-/// purchase, and neither can an app. So the site's answer is what decides
-/// whether the transaction is finished: one it did not record is left unfinished
-/// and offered again the next time the page asks for prices, which is what keeps
-/// a dropped connection from costing somebody the pack they paid for.
+/// What this never does is tell the site that something was bought, or know
+/// which of the site's addresses would hear about it. It hands the page the
+/// transaction ids, and the page posts them to the site, which takes each one
+/// to Apple itself (templates/app_store.jinja and src/app_store.rs in
+/// oeee-cafe/web); a page cannot be trusted about a purchase, and neither can
+/// an app. The page answers with the ids the site took, and only those are
+/// finished: one the site did not record is left unfinished and offered again
+/// the next time the page asks for prices, which is what keeps a dropped
+/// connection from costing somebody the pack they paid for. Reloading to show
+/// the pack is the page's to do as well, once it has answered.
 ///
 /// Both platforms sell it. The Mac app is sandboxed (ENABLE_APP_SANDBOX) and
 /// goes to the Mac App Store under the same bundle id as the iOS app, so it is
@@ -43,10 +46,13 @@ enum SupporterPack {
         }
         guard !prices.isEmpty else { return }
         _ = try? await webView.callAsyncJavaScript(
-            "window.oeeeApp && window.oeeeApp.storePrices && window.oeeeApp.storePrices(prices);",
+            """
+            window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.prices \
+            && window.oeeeApp.store.prices(prices);
+            """,
             arguments: ["prices": prices],
             in: nil,
-            contentWorld: .defaultClient
+            contentWorld: .page
         )
         await handUnfinished(in: webView)
     }
@@ -60,13 +66,11 @@ enum SupporterPack {
     /// living for as long as the app, which each tab would keep one of and each
     /// would hand the same purchase over again.
     private static func handUnfinished(in webView: WKWebView) async {
-        var handed = false
+        var unfinished: [VerificationResult<StoreKit.Transaction>] = []
         for await transaction in StoreKit.Transaction.unfinished {
-            handed = await hand(over: transaction, in: webView, reloading: false) || handed
+            unfinished.append(transaction)
         }
-        if handed {
-            _ = try? await webView.evaluateJavaScript("location.reload();")
-        }
+        await hand(over: unfinished, in: webView)
     }
 
     /// Sells `identifier`, and hands what comes back to the site.
@@ -83,7 +87,7 @@ enum SupporterPack {
             }
             switch try await product.purchase() {
             case .success(let verification):
-                await hand(over: verification, in: webView, reloading: true)
+                await hand(over: [verification], in: webView)
             case .userCancelled, .pending:
                 break
             @unknown default:
@@ -110,61 +114,53 @@ enum SupporterPack {
             // already on the device are still worth offering.
             Logger.error("SupporterPack: could not sync with the App Store: \(error)")
         }
-        var handed = false
-        for await entitlement in Transaction.currentEntitlements {
-            handed = await hand(over: entitlement, in: webView, reloading: false) || handed
+        var entitlements: [VerificationResult<StoreKit.Transaction>] = []
+        for await entitlement in StoreKit.Transaction.currentEntitlements {
+            entitlements.append(entitlement)
         }
-        if handed {
-            _ = try? await webView.evaluateJavaScript("location.reload();")
-        }
+        await hand(over: entitlements, in: webView)
     }
 
-    /// Tells the site about one transaction and finishes it if the site took
-    /// it. Returns whether it did.
+    /// Gives the page these transactions' ids in one call, and finishes the
+    /// ones it answers that the site took.
+    ///
+    /// All of them go at once so that the page, which reloads after an answer
+    /// in which the site took anything, reloads once rather than once for each
+    /// and does not leave while later ones are still being asked about.
     ///
     /// An envelope Apple could not verify is still offered: what it says is
-    /// only a transaction id, and the site asks Apple about that id itself. It
-    /// is not finished on anything but a plain yes, so nothing is thrown away
-    /// on the strength of a 502 or a signed-out session.
-    @discardableResult
+    /// only a transaction id, and the site asks Apple about that id itself.
+    /// Nothing is finished but what the page names in its answer, so an
+    /// answer that never comes -- a page without the store script, one that
+    /// navigated away -- finishes nothing, and it is all offered again.
     private static func hand(
-        over verification: VerificationResult<StoreKit.Transaction>,
-        in webView: WKWebView,
-        reloading: Bool
-    ) async -> Bool {
-        let transaction = verification.unsafePayloadValue
-        let script = """
-        const body = new URLSearchParams();
-        body.set("transaction_id", transactionID);
-        const response = await fetch("/auth/apple/purchase", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
-        });
-        return response.status;
-        """
-        let answer = try? await webView.callAsyncJavaScript(
-            script,
-            arguments: ["transactionID": String(transaction.id)],
-            in: nil,
-            contentWorld: .defaultClient
-        )
-        guard let status = answer as? Int else {
-            Logger.error("SupporterPack: the site did not answer about \(transaction.id)")
-            return false
+        over verifications: [VerificationResult<StoreKit.Transaction>],
+        in webView: WKWebView
+    ) async {
+        let transactions = verifications.map(\.unsafePayloadValue)
+        guard !transactions.isEmpty else { return }
+        let answer: Any?
+        do {
+            answer = try await webView.callAsyncJavaScript(
+                """
+                return window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.purchased \
+                ? await window.oeeeApp.store.purchased(ids) : [];
+                """,
+                arguments: ["ids": transactions.map { String($0.id) }],
+                in: nil,
+                contentWorld: .page
+            )
+        } catch {
+            Logger.error("SupporterPack: the page did not answer about \(transactions.count) transaction(s): \(error)")
+            return
         }
-        guard status == 204 else {
-            // 401 is nobody signed in, 429 is too many at once, 502 is Apple
-            // unreachable: all of them worth offering again rather than
-            // finishing over.
-            Logger.error("SupporterPack: the site answered \(status) about \(transaction.id)")
-            return false
+        let taken = Set((answer as? [Any] ?? []).compactMap { $0 as? String })
+        for transaction in transactions {
+            if taken.contains(String(transaction.id)) {
+                await transaction.finish()
+            } else {
+                Logger.error("SupporterPack: the site did not take \(transaction.id)")
+            }
         }
-        await transaction.finish()
-        if reloading {
-            _ = try? await webView.evaluateJavaScript("location.reload();")
-        }
-        return true
     }
 }
