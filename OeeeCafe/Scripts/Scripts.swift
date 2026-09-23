@@ -27,16 +27,6 @@ enum Scripts {
     static let quietContextMenu = bundled("QuietContextMenu")
     #endif
 
-    /// Says this build can sell the Supporter Pack, before the page paints, so
-    /// the buy buttons on /supporter are never drawn where nothing could
-    /// answer them and never flash in after the fact (style.css in
-    /// oeee-cafe/web). The Steam app says the same thing about itself with
-    /// data-steam-app.
-    ///
-    /// Both platforms say it: the Mac app is sandboxed and sold through the
-    /// Mac App Store, under the same bundle id and so with the same pack in it.
-    static let markStore = "document.documentElement.setAttribute('data-store', 'apple');"
-
     /// Fingers pan and pinch in the painter; the pen draws (frontend/shared/appBridge.ts).
     static let preferPen = "window.oeeeApp && window.oeeeApp.painter && window.oeeeApp.painter.preferPen();"
 

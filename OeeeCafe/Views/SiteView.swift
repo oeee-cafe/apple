@@ -3,8 +3,8 @@
 // The site's toolbar is the window's title bar. The window's own title bar steps aside
 // (transparent, its traffic lights moved into the toolbar at its left). The site knows it is
 // in the Mac app by the web view's user agent (WebTabController) and marks its own root
-// `data-desktop="macos"`, which is what its styles for the desktop app key on, room for the
-// traffic lights included. As on an iPhone, the site's toolbar is the way around, and the
+// `data-app="macos"`, which is what its styles for the Mac key on, room for the traffic
+// lights included. As on an iPhone, the site's toolbar is the way around, and the
 // Mac adds a menu bar whose commands ask the page (`window.oeeeApp.command`).
 #if os(macOS)
 import SwiftUI

@@ -1,5 +1,5 @@
 // macOS, at the start of every page. Lets the toolbar's empty space drag the window
-// (SiteChrome in SiteView.swift). The site marks the root `data-desktop="macos"` itself,
+// (SiteChrome in SiteView.swift). The site marks the root `data-app="macos"` itself,
 // from the web view's user agent, and keeps the room for the traffic lights (theme_head.jinja
 // and ds.css in oeee-cafe/web); it marks what may move the window `data-window-drag`
 // (toolbar.jinja). It asks on the same channel the site's messages come by, as a `window`

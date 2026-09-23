@@ -69,19 +69,22 @@ final class WebTabController: NSObject, ObservableObject {
         configuration.allowsInlineMediaPlayback = true
         #endif
         #if os(macOS)
-        // The site knows the Mac app by this, and marks its root `data-desktop="macos"`
-        // before the page paints (theme_head.jinja in oeee-cafe/web): its toolbar is
-        // then the title bar, with room kept for the traffic lights (ds.css). It also
-        // knows the app signs in with Apple and with Google itself rather than by
-        // following those links, which would open them outside the app and away from
-        // the session the answer belongs to (SignIn).
-        configuration.applicationNameForUserAgent = "OeeeCafeMac"
+        // The site knows the Mac app by this, and marks its root `data-app="macos"`
+        // and `data-form="desktop"` before the page paints (theme_head.jinja in
+        // oeee-cafe/web): its toolbar is then the title bar, with room kept for the
+        // traffic lights (ds.css). `store/apple` says the build sells through the App
+        // Store -- the Mac app is sandboxed and sold through the Mac App Store under
+        // the same bundle id, with the same pack in it -- so the page marks
+        // `data-store="apple"` and draws the Supporter Pack's buttons (app_store.jinja).
+        configuration.applicationNameForUserAgent = "OeeeCafe/macos store/apple"
         userScripts = SiteChrome.userScripts
         #else
-        // The site knows the app by this, and leaves search and scrolling to iOS
-        // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web) -- and signing in with
-        // Apple and with Google, which the app does itself (SignIn).
-        configuration.applicationNameForUserAgent = "OeeeCafeiOS"
+        // The site knows the app by this, and marks its root `data-app="ios"`,
+        // `data-form="handheld"` -- the page scrolls whole and a new one is pushed like
+        // a screen -- and, for `store/apple`, `data-store="apple"`, so the Supporter
+        // Pack's buttons are drawn (theme_head.jinja and app_store.jinja in
+        // oeee-cafe/web).
+        configuration.applicationNameForUserAgent = "OeeeCafe/ios store/apple"
         userScripts = []
         #endif
 
@@ -209,7 +212,6 @@ final class WebTabController: NSObject, ObservableObject {
         let content = webView.configuration.userContentController
         content.removeAllUserScripts()
         userScripts.forEach(content.addUserScript)
-        content.addUserScript(Scripts.atDocumentStart(Scripts.markStore))
         #if os(iOS)
         content.addUserScript(Scripts.atDocumentStart(Scripts.textScale(Self.textScale)))
         #endif
