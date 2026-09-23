@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "C73E61992EB22DD8008D4A6F"
-               BuildableName = "OeeeCafe.app"
+               BuildableName = "Oeee Cafe.app"
                BlueprintName = "OeeeCafe"
                ReferencedContainer = "container:OeeeCafe.xcodeproj">
             </BuildableReference>
@@ -45,7 +45,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C73E61992EB22DD8008D4A6F"
-            BuildableName = "OeeeCafe.app"
+            BuildableName = "Oeee Cafe.app"
             BlueprintName = "OeeeCafe"
             ReferencedContainer = "container:OeeeCafe.xcodeproj">
          </BuildableReference>
@@ -62,7 +62,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "C73E61992EB22DD8008D4A6F"
-            BuildableName = "OeeeCafe.app"
+            BuildableName = "Oeee Cafe.app"
             BlueprintName = "OeeeCafe"
             ReferencedContainer = "container:OeeeCafe.xcodeproj">
          </BuildableReference>
