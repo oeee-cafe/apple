@@ -12,13 +12,13 @@ import WebKit
 /// carry the sign-in between them (app_sign_in.jinja in oeee-cafe/web, which is the
 /// contract):
 ///
-/// 1. the app calls `window.oeeeSignIn.native(provider, next)`, and the page asks the site
+/// 1. the app calls `window.oeeeApp.signIn.native(provider, next)`, and the page asks the site
 ///    for this sign-in's state and nonce (`POST /auth/<provider>/start`), which the site
 ///    keeps in the web view's session;
 /// 2. the page sends `signIn {provider, nonce}` on the bridge (SiteBridge), and the app
 ///    runs the platform's own sheet for that nonce -- Apple's (AppleSignIn), or Google's
 ///    page in a browser of the system's (GoogleSignIn);
-/// 3. the app answers with `window.oeeeSignIn.answer(told)`, and the page posts the token
+/// 3. the app answers with `window.oeeeApp.signIn.answer(told)`, and the page posts the token
 ///    and the state to `/auth/<provider>`, and the site checks both against the session
 ///    and signs in (src/apple.rs, src/google.rs and src/web/handlers/identity.rs).
 ///
@@ -56,8 +56,8 @@ enum SignIn {
     static func begin(_ provider: String, next: String?, in webView: WKWebView) async {
         let started = try? await webView.callAsyncJavaScript(
             """
-            if (!window.oeeeSignIn) return false;
-            window.oeeeSignIn.native(provider, next);
+            if (!window.oeeeApp || !window.oeeeApp.signIn) return false;
+            window.oeeeApp.signIn.native(provider, next);
             return true;
             """,
             arguments: ["provider": provider, "next": next ?? NSNull()],
@@ -88,7 +88,7 @@ enum SignIn {
             told = .failed
         }
         _ = try? await webView.callAsyncJavaScript(
-            "window.oeeeSignIn && window.oeeeSignIn.answer(told);",
+            "window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.answer(told);",
             arguments: ["told": told.object],
             in: nil,
             contentWorld: .page

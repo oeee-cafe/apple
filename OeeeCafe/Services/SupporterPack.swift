@@ -43,7 +43,7 @@ enum SupporterPack {
         }
         guard !prices.isEmpty else { return }
         _ = try? await webView.callAsyncJavaScript(
-            "window.oeeeStorePrices && window.oeeeStorePrices(prices);",
+            "window.oeeeApp && window.oeeeApp.storePrices && window.oeeeApp.storePrices(prices);",
             arguments: ["prices": prices],
             in: nil,
             contentWorld: .defaultClient

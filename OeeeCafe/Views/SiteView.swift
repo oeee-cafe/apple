@@ -5,7 +5,7 @@
 // in the Mac app by the web view's user agent (WebTabController) and marks its own root
 // `data-desktop="macos"`, which is what its styles for the desktop app key on, room for the
 // traffic lights included. Where an iPhone has a tab bar, the Mac has the site's toolbar
-// and a menu bar whose commands ask the page (`window.oeeeCommand`).
+// and a menu bar whose commands ask the page (`window.oeeeApp.command`).
 #if os(macOS)
 import SwiftUI
 import Combine
@@ -262,45 +262,38 @@ enum SiteChrome {
         }
     }
 
-    private static let messageName = "oeeeWindow"
-
     /// What runs at the start of every page: the toolbar as the title bar (MacWindow.js),
     /// and a right-click menu kept to where it is useful (QuietContextMenu.js).
     static var userScripts: [WKUserScript] {
         [Scripts.macWindow, Scripts.quietContextMenu].map { Scripts.atDocumentStart($0) }
     }
 
-    /// Hears the window's chrome ask to drag or zoom the window.
-    static func install(in content: WKUserContentController) {
-        content.add(MessageHandler(), contentWorld: .page, name: messageName)
-    }
-
-    private final class MessageHandler: NSObject, WKScriptMessageHandler {
-        func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let body = message.body as? [String: Any], let window = message.webView?.window else { return }
-            switch body["window"] as? String {
-            case "drag":
-                // The press has gone to the page and back; drag if the button is still down.
-                guard NSEvent.pressedMouseButtons & 1 != 0 else { return }
-                let event = NSApp.currentEvent.flatMap { [.leftMouseDown, .leftMouseDragged].contains($0.type) ? $0 : nil }
-                    ?? NSEvent.mouseEvent(
-                        with: .leftMouseDown, location: window.mouseLocationOutsideOfEventStream,
-                        modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
-                        windowNumber: window.windowNumber, context: nil,
-                        eventNumber: 0, clickCount: 1, pressure: 1)
-                if let event {
-                    window.performDrag(with: event)
-                }
-            case "zoom":
-                // What a double click on a title bar does, as set in System Settings.
-                switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
-                case "Minimize": window.performMiniaturize(nil)
-                case "None": break
-                default: window.performZoom(nil)
-                }
-            default:
-                break
+    /// The window's chrome asking to drag or zoom `window` (a `window` message on the
+    /// bridge, from MacWindow.js).
+    static func windowAsked(_ action: String, of window: NSWindow?) {
+        guard let window else { return }
+        switch action {
+        case "drag":
+            // The press has gone to the page and back; drag if the button is still down.
+            guard NSEvent.pressedMouseButtons & 1 != 0 else { return }
+            let event = NSApp.currentEvent.flatMap { [.leftMouseDown, .leftMouseDragged].contains($0.type) ? $0 : nil }
+                ?? NSEvent.mouseEvent(
+                    with: .leftMouseDown, location: window.mouseLocationOutsideOfEventStream,
+                    modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                    windowNumber: window.windowNumber, context: nil,
+                    eventNumber: 0, clickCount: 1, pressure: 1)
+            if let event {
+                window.performDrag(with: event)
             }
+        case "zoom":
+            // What a double click on a title bar does, as set in System Settings.
+            switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
+            case "Minimize": window.performMiniaturize(nil)
+            case "None": break
+            default: window.performZoom(nil)
+            }
+        default:
+            break
         }
     }
 }

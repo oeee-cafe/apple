@@ -3,8 +3,8 @@ import WebKit
 
 /// What the app runs in the site's pages: the scripts it injects or evaluates, bundled as
 /// the .js files beside this one so they read as JavaScript, and the few one-line calls the
-/// app makes into the page (window.oeeeApp, window.oeeeCommand, window.oeeePainter,
-/// --oeee-text-scale and window.oeeeRestoreContent, all in oeee-cafe/web).
+/// app makes into the page -- all of them on window.oeeeApp (app_bridge.jinja in
+/// oeee-cafe/web), and --oeee-text-scale.
 ///
 /// What the site tells the app is not here: it says that itself (SiteBridge).
 enum Scripts {
@@ -41,20 +41,20 @@ enum Scripts {
 
     /// Takes down the skeleton the site slid in for a page that is not coming
     /// (toolbar.jinja in oeee-cafe/web), so the page that was left shows again.
-    static let restoreContent = "window.oeeeRestoreContent && window.oeeeRestoreContent();"
+    static let restoreContent = "window.oeeeApp && window.oeeeApp.restoreContent && window.oeeeApp.restoreContent();"
 
     /// Fingers pan and pinch in the painter; the pen draws (frontend/shared/appBridge.ts).
-    static let preferPen = "window.oeeePainter && window.oeeePainter.preferPen();"
+    static let preferPen = "window.oeeeApp && window.oeeeApp.painter && window.oeeeApp.painter.preferPen();"
 
     /// One of the painter's commands ("toggle-eraser", "previous-tool").
     static func painterCommand(_ name: String) -> String {
-        "window.oeeePainter && window.oeeePainter.command(\(literal(name)));"
+        "window.oeeeApp && window.oeeeApp.painter && window.oeeeApp.painter.command(\(literal(name)));"
     }
 
     /// One of the site's commands (toolbar.jinja), which the site alone knows how to carry
     /// out. A page without the toolbar -- a replay -- has none, and the command does nothing.
     static func siteCommand(_ name: String) -> String {
-        "window.oeeeCommand && window.oeeeCommand(\(literal(name)));"
+        "window.oeeeApp && window.oeeeApp.command && window.oeeeApp.command(\(literal(name)));"
     }
 
     /// The reader's text size, for the site's type scale to follow (ds.css).

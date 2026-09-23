@@ -79,7 +79,6 @@ final class WebTabController: NSObject, ObservableObject {
         // the session the answer belongs to (SignIn).
         configuration.applicationNameForUserAgent = "OeeeCafeMac"
         userScripts = SiteChrome.userScripts
-        SiteChrome.install(in: configuration.userContentController)
         #else
         // The site knows the app by this, and leaves search and scrolling to iOS
         // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web) -- and signing in with
@@ -324,6 +323,12 @@ final class WebTabController: NSObject, ObservableObject {
             Task { await SupporterPack.restore(in: webView) }
         case .signIn(let provider, let nonce):
             Task { await SignIn.sheet(provider, nonce: nonce, in: webView) }
+        case .window(let action):
+            #if os(macOS)
+            SiteChrome.windowAsked(action, of: webView.window)
+            #else
+            _ = action
+            #endif
         }
     }
 

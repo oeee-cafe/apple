@@ -21,6 +21,8 @@ enum SiteMessage: Equatable {
     case purchase(Purchase)
     case restore
     case signIn(provider: String, nonce: String)
+    /// The Mac's window chrome (MacWindow.js), not the site: drag or zoom the window.
+    case window(action: String)
     case words(Words)
 
     /// The version of the contract this build speaks. A message of another is a change
@@ -124,7 +126,7 @@ enum SiteMessage: Equatable {
         let message: SiteMessage?
 
         private enum Key: String, CodingKey {
-            case v, type, count, name, drawing, state, store, products, provider, nonce
+            case v, type, count, name, drawing, state, store, products, provider, nonce, action
         }
 
         init(from decoder: Decoder) throws {
@@ -162,6 +164,8 @@ enum SiteMessage: Equatable {
                 )
             case "words":
                 message = .words(try Words(from: decoder))
+            case "window":
+                message = .window(action: try container.decode(String.self, forKey: .action))
             default:
                 message = nil
             }
