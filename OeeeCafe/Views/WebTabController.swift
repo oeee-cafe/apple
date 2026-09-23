@@ -33,6 +33,8 @@ final class WebTabController: NSObject, ObservableObject {
     /// The page last asked for, to ask for again.
     var requestedURL: URL?
     private var connectivity: AnyCancellable?
+    /// APNs's token for this device, handed to the page as it arrives (`givePushToken`).
+    private var pushToken: AnyCancellable?
     #if os(macOS)
     /// The site's ground, as the pages say it (SiteTheme).
     private var ground: AnyCancellable?
@@ -145,6 +147,14 @@ final class WebTabController: NSObject, ObservableObject {
             guard let self, self.isUnreachable else { return }
             self.retry()
         }
+        // A token that arrives while a page is showing is handed to that page, rather than
+        // waiting for the next one to say who is signed in: the first sign-in is the page
+        // that asked for it, and may be the last page for a while. Only when the last page
+        // believed said someone is signed in, which is the same word `pageSaid` goes by.
+        pushToken = PushNotificationService.shared.$token.sink { [weak self] token in
+            guard let self, self.hasLoaded, self.lastSignedIn == true, let token else { return }
+            self.givePushToken(token)
+        }
     }
 
     /// Shows the site's first page. Asked for rather than done on its own, so that whoever
@@ -218,6 +228,7 @@ final class WebTabController: NSObject, ObservableObject {
         webView.configuration.userContentController.removeAllScriptMessageHandlers()
         webView.stopLoading()
         connectivity = nil
+        pushToken = nil
         #if os(macOS)
         ground = nil
         #endif
@@ -356,6 +367,26 @@ final class WebTabController: NSObject, ObservableObject {
         if trusted, let signedIn = page.signedIn {
             lastSignedIn = signedIn
             AuthService.shared.pageSaid(signedIn: signedIn)
+            if signedIn, let token = PushNotificationService.shared.token {
+                givePushToken(token)
+            }
+        }
+    }
+
+    /// Hands the page this device's push token to register for whoever is signed in on it
+    /// (`pushToken`, app_bridge.jinja in oeee-cafe/web). Every page that says someone is
+    /// signed in is handed it, since the page is what knows whether the token is registered
+    /// for them yet; one handed a token it already registered does nothing. Not on a page
+    /// the back-forward cache kept, whose word on who is signed in is not yet believed
+    /// (`restored`).
+    private func givePushToken(_ token: String) {
+        Task {
+            _ = try? await webView.callAsyncJavaScript(
+                "window.oeeeApp && window.oeeeApp.pushToken && window.oeeeApp.pushToken(token);",
+                arguments: ["token": token],
+                in: nil,
+                contentWorld: .page
+            )
         }
     }
 

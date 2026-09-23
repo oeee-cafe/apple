@@ -150,8 +150,8 @@ struct SiteView: View {
 
     private func authenticationChanged(_ isAuthenticated: Bool) async {
         if isAuthenticated {
-            // Registers this Mac's push token for the signed-in user (asking for
-            // permission the first time).
+            // Asks for this Mac's push token (and for permission, the first time), which
+            // the pages then register for whoever is signed in.
             await PushNotificationService.shared.requestPermissionsAndRegister()
         } else {
             UnreadCount.shared.clear()

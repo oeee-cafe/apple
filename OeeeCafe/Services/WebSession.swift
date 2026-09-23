@@ -2,8 +2,8 @@ import Foundation
 import WebKit
 
 /// The web views' cookies, which are the app's session: whoever is signed in on them is
-/// who the app is (AuthService hears it from the pages), and the few requests the app makes
-/// itself (APIClient) carry the same cookies.
+/// who the app is (AuthService hears it from the pages). The app makes no requests of its
+/// own to the site, so nothing else needs them.
 final class WebSession {
     static let shared = WebSession()
 
@@ -66,41 +66,6 @@ final class WebSession {
                 continuation.resume()
             }
         }
-    }
-
-    /// The `Cookie` header the web views would send to `url`.
-    func cookieHeader(for url: URL) async -> [String: String] {
-        let cookies = await dataStore.httpCookieStore.allCookies().filter { cookie in
-            matchesSite(cookie)
-                && url.path.hasPrefix(cookie.path)
-                && (!cookie.isSecure || url.scheme == "https")
-                && (cookie.expiresDate.map { $0 > Date() } ?? true)
-        }
-        return HTTPCookie.requestHeaderFields(with: cookies)
-    }
-
-    // MARK: - The device cookie
-
-    /// Named in the site's sign-out (`oeee_device`, src/web/handlers/auth.rs in
-    /// oeee-cafe/web): signing out on the site's page deletes the device whose push token
-    /// this holds, so a device signed out gets no more of that account's notifications.
-    /// The app used to stop the sign-out form on its way and delete the device first.
-    private static let deviceCookieName = "oeee_device"
-
-    /// Says which device this is, to the site's sign-out.
-    func setDeviceCookie(_ token: String) async {
-        guard let host = site?.host else { return }
-        let properties: [HTTPCookiePropertyKey: Any] = [
-            .name: Self.deviceCookieName,
-            .value: token,
-            .domain: host,
-            .path: "/",
-            .secure: "TRUE",
-            // As long as the token is this device's, which a sign-in says again.
-            .expires: Date().addingTimeInterval(60 * 60 * 24 * 365),
-        ]
-        guard let cookie = HTTPCookie(properties: properties) else { return }
-        await dataStore.httpCookieStore.setCookie(cookie)
     }
 
     private func matchesSite(_ cookie: HTTPCookie) -> Bool {

@@ -126,9 +126,7 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
         _ application: PlatformApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
     ) {
-        Task {
-            await pushService.registerDeviceToken(deviceToken)
-        }
+        pushService.received(deviceToken)
     }
 
     // Called when APNs registration fails
