@@ -1,4 +1,5 @@
 *.xcuserstate
+xcuserdata/
 
 .sentryclirc
 build/
