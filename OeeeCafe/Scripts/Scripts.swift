@@ -51,11 +51,10 @@ enum Scripts {
         "window.oeeePainter && window.oeeePainter.command(\(literal(name)));"
     }
 
-    /// One of the site's commands (toolbar.jinja), or `fallback` when the page has no
-    /// toolbar to carry it out.
-    static func siteCommand(_ name: String, fallback: URL?) -> String {
-        let otherwise = fallback.map { "location.href = \(literal($0.absoluteString));" } ?? ""
-        return "if (!(window.oeeeCommand && window.oeeeCommand(\(literal(name))))) { \(otherwise) }"
+    /// One of the site's commands (toolbar.jinja), which the site alone knows how to carry
+    /// out. A page without the toolbar -- a replay -- has none, and the command does nothing.
+    static func siteCommand(_ name: String) -> String {
+        "window.oeeeCommand && window.oeeeCommand(\(literal(name)));"
     }
 
     /// The reader's text size, for the site's type scale to follow (ds.css).

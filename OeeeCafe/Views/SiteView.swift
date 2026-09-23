@@ -35,19 +35,14 @@ final class Site: ObservableObject {
 
     // MARK: - Commands
 
-    /// Where a command goes when the page has no toolbar to ask. Commands that are not a
-    /// place do nothing there.
-    private static let fallbacks: [String: String] = [
-        "recent": "/", "about": "/", "following": "/home", "communities": "/communities",
-        "together": "/collaborate", "hashtags": "/hashtags", "search": "/search",
-        "notifications": "/notifications", "drafts": "/posts/drafts", "account": "/account",
-    ]
-
     /// Asks the page to carry out one of the site's commands. Going somewhere is the page's
     /// own navigation, so a page holding an unsaved drawing still asks before it is left.
+    ///
+    /// The site's toolbar is the one list of what each command does. On a page without it
+    /// -- a replay -- a menu item does nothing; this used to load the command's page from a
+    /// table of the site's routes kept here, a second copy of them to keep in step.
     func command(_ name: String) {
-        let fallback = Self.fallbacks[name].flatMap { URL(string: APIConfig.shared.baseURL + $0) }
-        evaluate(Scripts.siteCommand(name, fallback: fallback))
+        evaluate(Scripts.siteCommand(name))
     }
 
     func back() { evaluate("history.back();") }
