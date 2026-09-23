@@ -71,10 +71,9 @@ enum AppleSignIn {
         /// `performRequests()` sets Apple's side of the flow up before it returns, waiting on
         /// a worker of AuthenticationServices' own at the default quality of service. Called
         /// from the main thread, which is user-interactive, that is the priority inversion the
-        /// runtime complains of -- the same shape as the cookie storage in WebSession, and it
-        /// gives way to the same lever: a queue of this class's own, fixed below the worker it
-        /// waits on, since an explicit queue quality of service outranks the submitting
-        /// context's. Nothing higher waits on anything lower either way round.
+        /// runtime complains of. It gives way to a queue of this class's own, fixed below the
+        /// worker it waits on, since an explicit queue quality of service outranks the
+        /// submitting context's. Nothing higher waits on anything lower either way round.
         ///
         /// Only the call goes there. The flow is set up here on the main actor, and the
         /// framework comes back to it of its own accord for the sheet and for the answer:

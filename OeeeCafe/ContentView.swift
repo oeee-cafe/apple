@@ -16,41 +16,28 @@ struct ContentView: View {
     /// the Mac app.
     @StateObject private var web = WebTabController()
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
-    @State private var isReady = false
 
     var body: some View {
-        Group {
-            if isReady {
-                WebTabContent(controller: web)
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(Color("Ground"))
+        WebTabContent(controller: web)
+            .task {
+                // Before asking about notifications: a page waiting to be opened is what the
+                // reader came for, and does not wait behind a permission they may sit on.
+                openPendingNavigation()
+                web.start()
+                await authenticationChanged(authService.isAuthenticated)
             }
-        }
-        .task {
-            // Carries over a session signed in natively before anything is fetched.
-            await WebSession.shared.start()
-            web.start()
-            isReady = true
-            // Before asking about notifications: a page waiting to be opened is what the
-            // reader came for, and does not wait behind a permission they may sit on.
-            openPendingNavigation()
-            await authenticationChanged(authService.isAuthenticated)
-        }
-        .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
-            guard isReady else { return }
-            web.authenticationChanged(signedIn: isAuthenticated)
-            Task { await authenticationChanged(isAuthenticated) }
-        }
-        .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
-            openPendingNavigation()
-        }
-        // A tapped oeee.cafe link, from another app (applinks, OeeeCafe.entitlements).
-        .onOpenURL { url in
-            navigationCoordinator.open(url)
-        }
-        .background(SiteThemeApplier())
+            .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
+                web.authenticationChanged(signedIn: isAuthenticated)
+                Task { await authenticationChanged(isAuthenticated) }
+            }
+            .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
+                openPendingNavigation()
+            }
+            // A tapped oeee.cafe link, from another app (applinks, OeeeCafe.entitlements).
+            .onOpenURL { url in
+                navigationCoordinator.open(url)
+            }
+            .background(SiteThemeApplier())
     }
 
     private func authenticationChanged(_ isAuthenticated: Bool) async {
@@ -61,7 +48,7 @@ struct ContentView: View {
     }
 
     private func openPendingNavigation() {
-        guard isReady, let pending = navigationCoordinator.pendingNavigation else { return }
+        guard let pending = navigationCoordinator.pendingNavigation else { return }
         navigationCoordinator.clearPendingNavigation()
         guard let url = pending.url else { return }
         web.load(url)

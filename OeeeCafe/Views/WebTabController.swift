@@ -87,7 +87,6 @@ final class WebTabController: NSObject, ObservableObject {
 
     override init() {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = WebSession.shared.dataStore
         #if os(iOS)
         configuration.allowsInlineMediaPlayback = true
         #endif
@@ -155,8 +154,7 @@ final class WebTabController: NSObject, ObservableObject {
         }
     }
 
-    /// Shows the site's first page. Asked for rather than done on its own, so that whoever
-    /// was signed in natively has been picked up before anything is fetched (WebSession).
+    /// Shows the site's first page, unless a page from outside the app got there first.
     func start() {
         guard webView.url == nil else { return }
         load(Self.home)

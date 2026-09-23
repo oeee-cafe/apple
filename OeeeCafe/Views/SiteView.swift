@@ -20,7 +20,7 @@ final class Site: ObservableObject {
 
     private init() {}
 
-    /// Makes the web view once whoever is signed in on the web views has been picked up.
+    /// Makes the web view, once the window is there to show it.
     func start() {
         guard controller == nil else { return }
         let controller = WebTabController()
@@ -142,8 +142,6 @@ struct SiteView: View {
         .background(SiteWindowSetup())
         .frame(minWidth: 800, minHeight: 600)
         .task {
-            // Carries over a session signed in natively before showing the site.
-            await WebSession.shared.start()
             site.start()
             // Before asking about notifications: a page waiting to be opened is what the
             // reader came for, and does not wait behind a permission they may sit on.
