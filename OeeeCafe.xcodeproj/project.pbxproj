@@ -10,7 +10,18 @@
 		09C5DAB0962A488A9425F647 /* Sentry in Frameworks */ = {isa = PBXBuildFile; productRef = 0044112E41DC4707B652BA78 /* Sentry */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		C7A0C0072F10000100A1B2C3 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C73E61922EB22DD8008D4A6F /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C73E61992EB22DD8008D4A6F;
+			remoteInfo = OeeeCafe;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
+		C7A0C0012F10000100A1B2C3 /* OeeeCafeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OeeeCafeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C73E619A2EB22DD8008D4A6F /* OeeeCafe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = OeeeCafe.app; path = "Oeee Cafe.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -18,6 +29,11 @@
 		C73E619C2EB22DD8008D4A6F /* OeeeCafe */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = OeeeCafe;
+			sourceTree = "<group>";
+		};
+		C7A0C0022F10000100A1B2C3 /* OeeeCafeTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = OeeeCafeTests;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -31,6 +47,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C7A0C0052F10000100A1B2C3 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -38,6 +61,7 @@
 			isa = PBXGroup;
 			children = (
 				C73E619C2EB22DD8008D4A6F /* OeeeCafe */,
+				C7A0C0022F10000100A1B2C3 /* OeeeCafeTests */,
 				C73E619B2EB22DD8008D4A6F /* Products */,
 			);
 			sourceTree = "<group>";
@@ -46,6 +70,7 @@
 			isa = PBXGroup;
 			children = (
 				C73E619A2EB22DD8008D4A6F /* OeeeCafe.app */,
+				C7A0C0012F10000100A1B2C3 /* OeeeCafeTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -77,6 +102,29 @@
 			productReference = C73E619A2EB22DD8008D4A6F /* OeeeCafe.app */;
 			productType = "com.apple.product-type.application";
 		};
+		C7A0C0032F10000100A1B2C3 /* OeeeCafeTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C7A0C00B2F10000100A1B2C3 /* Build configuration list for PBXNativeTarget "OeeeCafeTests" */;
+			buildPhases = (
+				C7A0C0042F10000100A1B2C3 /* Sources */,
+				C7A0C0052F10000100A1B2C3 /* Frameworks */,
+				C7A0C0062F10000100A1B2C3 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C7A0C0082F10000100A1B2C3 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				C7A0C0022F10000100A1B2C3 /* OeeeCafeTests */,
+			);
+			name = OeeeCafeTests;
+			packageProductDependencies = (
+			);
+			productName = OeeeCafeTests;
+			productReference = C7A0C0012F10000100A1B2C3 /* OeeeCafeTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -89,6 +137,10 @@
 				TargetAttributes = {
 					C73E61992EB22DD8008D4A6F = {
 						CreatedOnToolsVersion = 26.0.1;
+					};
+					C7A0C0032F10000100A1B2C3 = {
+						CreatedOnToolsVersion = 27.0;
+						TestTargetID = C73E61992EB22DD8008D4A6F;
 					};
 				};
 			};
@@ -113,12 +165,20 @@
 			projectRoot = "";
 			targets = (
 				C73E61992EB22DD8008D4A6F /* OeeeCafe */,
+				C7A0C0032F10000100A1B2C3 /* OeeeCafeTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		C73E61982EB22DD8008D4A6F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		C7A0C0062F10000100A1B2C3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -153,7 +213,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		C7A0C0042F10000100A1B2C3 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		C7A0C0082F10000100A1B2C3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C73E61992EB22DD8008D4A6F /* OeeeCafe */;
+			targetProxy = C7A0C0072F10000100A1B2C3 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		C73E61A32EB22DD9008D4A6F /* Debug */ = {
@@ -430,6 +505,62 @@
 			};
 			name = Release;
 		};
+		C7A0C0092F10000100A1B2C3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = K4CQ85R27U;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cafe.oeee.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Oeee Cafe.app/Oeee Cafe";
+				"TEST_HOST[sdk=macosx*]" = "$(BUILT_PRODUCTS_DIR)/Oeee Cafe.app/Contents/MacOS/Oeee Cafe";
+			};
+			name = Debug;
+		};
+		C7A0C00A2F10000100A1B2C3 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEAD_CODE_STRIPPING = YES;
+				DEVELOPMENT_TEAM = K4CQ85R27U;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.6;
+				MACOSX_DEPLOYMENT_TARGET = 15.6;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = cafe.oeee.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = auto;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator macosx";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Oeee Cafe.app/Oeee Cafe";
+				"TEST_HOST[sdk=macosx*]" = "$(BUILT_PRODUCTS_DIR)/Oeee Cafe.app/Contents/MacOS/Oeee Cafe";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -447,6 +578,15 @@
 			buildConfigurations = (
 				C73E61A62EB22DD9008D4A6F /* Debug */,
 				C73E61A72EB22DD9008D4A6F /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C7A0C00B2F10000100A1B2C3 /* Build configuration list for PBXNativeTarget "OeeeCafeTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C7A0C0092F10000100A1B2C3 /* Debug */,
+				C7A0C00A2F10000100A1B2C3 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
