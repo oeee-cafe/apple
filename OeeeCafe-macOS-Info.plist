@@ -8,7 +8,10 @@
 	     build generates its Info.plist from build settings, which is why this
 	     file exists at all -- there is nowhere else to put a key of our own.
 	     Left empty, the app does not offer signing in with Google and the site
-	     shows no button (theme_head.jinja in oeee-cafe/web). -->
+	     shows no button (theme_head.jinja in oeee-cafe/web).
+
+	     Xcode rewrites this file when it edits it and drops comments as it
+	     goes, so if this is missing again that is where it went. -->
 	<key>GoogleClientID</key>
 	<string>371775747741-6g94c9vfojlsosc1673ppv99b2nmacd5.apps.googleusercontent.com</string>
 </dict>
