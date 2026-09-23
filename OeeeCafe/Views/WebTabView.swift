@@ -58,12 +58,13 @@ struct WebTabView: NSViewRepresentable {
 #else
 /// The container fills the screen, but the web view stops at the status bar: a page pulled
 /// down to refresh moves below it, with the spinner between, rather than under the Dynamic
-/// Island. Behind the status bar is the page's own ground, so at rest the two read as one.
+/// Island. Behind the status bar is NEO's ground, which is what the site lays its pages on
+/// (`--ds-ground`, ds.css in oeee-cafe/web), so at rest the two read as one.
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
 
     func makeUIView(context: Context) -> UIView {
-        let container = Container()
+        let container = UIView()
         attach(to: container)
         return container
     }
@@ -71,21 +72,6 @@ struct WebTabView: UIViewRepresentable {
     func updateUIView(_ container: UIView, context: Context) {
         if controller.webView.superview !== container {
             attach(to: container)
-        }
-    }
-
-    final class Container: UIView {
-        private var ground: NSKeyValueObservation?
-
-        func show(_ controller: WebTabController) {
-            let webView = controller.webView
-            // NEO's ground until the page says what its own is.
-            backgroundColor = controller.hasLoaded ? webView.underPageBackgroundColor : UIColor(named: "Ground")
-            ground = webView.observe(\.underPageBackgroundColor) { [weak self] webView, _ in
-                MainActor.assumeIsolated {
-                    self?.backgroundColor = webView.underPageBackgroundColor
-                }
-            }
         }
     }
 }
@@ -100,7 +86,12 @@ extension WebTabView {
         #if os(macOS)
         let top = container.topAnchor
         #else
-        (container as? Container)?.show(controller)
+        // The web view draws no ground of its own (WebTabController), so this is what shows
+        // behind the status bar, in whichever of the two the site's theme put the window in
+        // (SiteTheme). Not the web view's `underPageBackgroundColor`: a web view that draws
+        // no background has none to give -- it is transparent, and stays so -- so asking it
+        // left the strip behind the clock black.
+        container.backgroundColor = UIColor(named: "Ground")
         let top = container.safeAreaLayoutGuide.topAnchor
         #endif
         NSLayoutConstraint.activate([
