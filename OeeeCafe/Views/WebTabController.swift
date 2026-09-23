@@ -12,7 +12,10 @@ import UIKit
 /// WebTabController+UI.swift is WebKit asking for windows, dialogs and menus; Pencil.swift
 /// is Apple Pencil in the painter.
 final class WebTabController: NSObject, ObservableObject {
-    let tab: WebTab
+    /// Which tab this web view serves. It can change once: the tab somebody signs in on
+    /// goes away when they are signed in, and rather than throw the page away the web
+    /// view is handed to the tab they are sent to (WebTabStore.authenticationChanged).
+    private(set) var tab: WebTab
     let webView: WKWebView
     /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
     /// not left without asking.
@@ -32,6 +35,11 @@ final class WebTabController: NSObject, ObservableObject {
     private var connectivity: AnyCancellable?
     /// Asked once a leave is already being asked about, so a second does not stack on it.
     private var isAskingToLeave = false
+    /// Takes over another tab, keeping the page, its history and its scroll where they are.
+    func adopt(tab: WebTab) {
+        self.tab = tab
+    }
+
     /// Who the page shown last said is signed in, or nil on a page that could not tell.
     /// A tab already showing the new answer needs no reloading after a sign-in: it is the
     /// page that said so (WebTabStore.authenticationChanged).
