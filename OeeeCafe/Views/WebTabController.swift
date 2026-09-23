@@ -16,8 +16,6 @@ final class WebTabController: NSObject, ObservableObject {
     /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
     /// not left without asking.
     @Published private(set) var isPainting = false
-    /// Whether pulling the page down may reload it, as the page says.
-    @Published private(set) var isRefreshable = true
     /// Whether a page has finished loading, so the web view has a ground of its own.
     @Published private(set) var hasLoaded = false
     /// Whether the site could not be reached with nothing yet to show (UnreachableView).
@@ -52,7 +50,6 @@ final class WebTabController: NSObject, ObservableObject {
     private let userScripts: [WKUserScript]
 
     #if os(iOS)
-    let refreshControl = UIRefreshControl()
     /// The drawing a finger last landed on, as the page said (DrawingMenu).
     var pressedDrawing: DrawingMenu.Drawing?
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
@@ -116,7 +113,6 @@ final class WebTabController: NSObject, ObservableObject {
 
         #if os(iOS)
         grid = PageGrid(under: webView.scrollView)
-        refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.addInteraction(pencil)
         observers = [
             NotificationCenter.default.addObserver(
@@ -242,10 +238,6 @@ final class WebTabController: NSObject, ObservableObject {
     }
     #endif
 
-    @objc private func refresh() {
-        webView.reload()
-    }
-
     // MARK: - What the site says
 
     /// Whether a page arrived by Back or Forward. A page the back-forward cache kept was
@@ -304,9 +296,8 @@ final class WebTabController: NSObject, ObservableObject {
     }
 
     private func pageSaid(_ page: SiteMessage.Page) {
-        if page.painting != isPainting || page.refreshable != isRefreshable {
+        if page.painting != isPainting {
             isPainting = page.painting
-            isRefreshable = page.refreshable
             showPageState()
         }
 
@@ -350,14 +341,16 @@ final class WebTabController: NSObject, ObservableObject {
         }
     }
 
-    /// In the painter a swipe from the edge or down from the top is a stroke, not a way off
-    /// the page; and a page the site says may not be reloaded is not pulled down to reload.
+    /// In the painter a swipe from the edge is a stroke, not a way off the page.
+    ///
+    /// Pulling a page down to reload it is the page's own (app_refresh.jinja in
+    /// oeee-cafe/web): the site keeps its toolbar still and pulls the content out from
+    /// under it, which a refresh control here could not -- it moved the whole scroll view,
+    /// the toolbar with it. So the scroll view does not bounce a short page either.
     private func showPageState() {
         webView.allowsBackForwardNavigationGestures = !isPainting
         #if os(iOS)
-        webView.scrollView.refreshControl = isRefreshable && !isPainting ? refreshControl : nil
-        // Pages shorter than the screen can be pulled too.
-        webView.scrollView.alwaysBounceVertical = !isPainting
+        webView.scrollView.alwaysBounceVertical = false
         // A page is laid out in what the scroll view leaves unobscured, and the scroll view
         // keeps the strip above the home indicator to itself: a page that ends at the
         // screen's bottom edge is read past it, and a list's last row is not under the bar
@@ -394,13 +387,6 @@ final class WebTabController: NSObject, ObservableObject {
     func pageFinished() {
         hasLoaded = true
         isUnreachable = false
-        endRefreshing()
-    }
-
-    func endRefreshing() {
-        #if os(iOS)
-        webView.scrollView.refreshControl?.endRefreshing()
-        #endif
     }
 
     /// A page that could not be reached: the page that was left stays, with a moment's

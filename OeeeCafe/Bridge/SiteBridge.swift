@@ -41,8 +41,6 @@ enum SiteMessage: Equatable {
         let signedIn: Bool?
         /// Whether leaving the page would lose a drawing in progress.
         let painting: Bool
-        /// Whether pulling down may reload the page: neither a painter nor a replay may be.
-        let refreshable: Bool
     }
 
     struct Theme: Decodable, Equatable {

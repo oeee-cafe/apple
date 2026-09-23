@@ -26,9 +26,8 @@ struct WebTabView: NSViewRepresentable {
     }
 }
 #else
-/// The container fills the screen, but the web view stops at the status bar: a page pulled
-/// down to refresh moves below it, with the spinner between, rather than under the Dynamic
-/// Island. Behind the status bar is the site's ground, as the pages say it (`--ds-ground`,
+/// The container fills the screen, but the web view stops at the status bar, so nothing of
+/// the page is under the Dynamic Island. Behind the status bar is the site's ground, as the pages say it (`--ds-ground`,
 /// SiteTheme), which is what the site lays its pages on, so at rest the two read as one.
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
