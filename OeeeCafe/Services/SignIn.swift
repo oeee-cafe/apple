@@ -65,7 +65,7 @@ enum SignIn {
             told = .failed
         }
         _ = try? await webView.callAsyncJavaScript(
-            "window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.answer(told);",
+            Scripts.signInAnswer,
             arguments: ["told": told.object],
             in: nil,
             contentWorld: .page

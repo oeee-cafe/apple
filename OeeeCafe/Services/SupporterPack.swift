@@ -46,10 +46,7 @@ enum SupporterPack {
         }
         guard !prices.isEmpty else { return }
         _ = try? await webView.callAsyncJavaScript(
-            """
-            window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.prices \
-            && window.oeeeApp.store.prices(prices);
-            """,
+            Scripts.storePrices,
             arguments: ["prices": prices],
             in: nil,
             contentWorld: .page
@@ -139,10 +136,7 @@ enum SupporterPack {
 
     private static func ended(_ ending: Ending, in webView: WKWebView) async {
         _ = try? await webView.callAsyncJavaScript(
-            """
-            window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.ended \
-            && window.oeeeApp.store.ended(outcome);
-            """,
+            Scripts.storeEnded,
             arguments: ["outcome": ending.rawValue],
             in: nil,
             contentWorld: .page
@@ -177,10 +171,7 @@ enum SupporterPack {
         let answer: Any?
         do {
             answer = try await webView.callAsyncJavaScript(
-                """
-                return window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.purchased \
-                ? await window.oeeeApp.store.purchased(ids) : [];
-                """,
+                Scripts.storePurchased,
                 arguments: ["ids": transactions.map { String($0.id) }],
                 in: nil,
                 contentWorld: .page

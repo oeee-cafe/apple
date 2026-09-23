@@ -1,7 +1,9 @@
 import Foundation
 
-/// The few one-line calls the app makes into the site's pages, all of them on
-/// window.oeeeApp (app_bridge.jinja in oeee-cafe/web). The app injects nothing: what a page
+/// Every call the app makes into the site's pages, all of them on window.oeeeApp
+/// (app_bridge.jinja in oeee-cafe/web), and all of them here rather than where they are
+/// made, so that the contract test (OeeeCafeTests) can check each member they reach for
+/// against the site's list of them (appContract.json). The app injects nothing: what a page
 /// needs from the platform -- its window's chrome, its scale, the reader's text size -- the
 /// page asks for or finds out itself.
 ///
@@ -39,8 +41,49 @@ enum Scripts {
 
     /// One of the site's commands (toolbar.jinja), which the site alone knows how to carry
     /// out. A page without the toolbar -- a replay -- has none, and the command does nothing.
-    static func siteCommand(_ name: String) -> String {
-        "window.oeeeApp && window.oeeeApp.command && window.oeeeApp.command(\(literal(name)));"
+    static func siteCommand(_ command: SiteCommand) -> String {
+        "window.oeeeApp && window.oeeeApp.command && window.oeeeApp.command(\(literal(command.rawValue)));"
+    }
+
+    /// This device's push token, `token`, for the page to register for whoever is signed in
+    /// on it (WebTabController). Run with `callAsyncJavaScript`.
+    static let pushToken =
+        "window.oeeeApp && window.oeeeApp.pushToken && window.oeeeApp.pushToken(token);"
+
+    /// What a sign-in sheet came to, `told` (SignIn.Told), for the page to carry on with
+    /// (app_sign_in.jinja). Run with `callAsyncJavaScript`.
+    static let signInAnswer =
+        "window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.answer(told);"
+
+    /// The store's prices, `prices`, for the Supporter Pack's buttons (SupporterPack,
+    /// supporter.jinja). Run with `callAsyncJavaScript`.
+    static let storePrices = """
+        window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.prices \
+        && window.oeeeApp.store.prices(prices);
+        """
+
+    /// How a press that handed the page no proof ended, `outcome` (SupporterPack,
+    /// app_store.jinja). Run with `callAsyncJavaScript`.
+    static let storeEnded = """
+        window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.ended \
+        && window.oeeeApp.store.ended(outcome);
+        """
+
+    /// Transaction ids, `ids`, for the site to take, answered with the ids it took
+    /// (SupporterPack, app_store.jinja). Run with `callAsyncJavaScript`.
+    static let storePurchased = """
+        return window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.purchased \
+        ? await window.oeeeApp.store.purchased(ids) : [];
+        """
+
+    /// Every script above, one command standing for each kind made per command, for the
+    /// contract test.
+    static var all: [String] {
+        [
+            wouldLoseWork, leaving, preferPen, painterCommand("toggle-eraser"),
+            siteCommand(.recent), pushToken, signInAnswer, storePrices, storeEnded,
+            storePurchased,
+        ]
     }
 
     /// `string` as a JavaScript string literal.
@@ -49,4 +92,15 @@ enum Scripts {
         let array = data.flatMap { String(data: $0, encoding: .utf8) } ?? "[\"\"]"
         return String(array.dropFirst().dropLast())
     }
+}
+
+/// The site's commands the Mac's menu bar asks for (toolbar.jinja in oeee-cafe/web), by the
+/// names `oeeeApp.command` takes, which the contract lists (appContract.json's `commands`).
+enum SiteCommand: String, CaseIterable {
+    case recent, following, communities, together, hashtags, search, notifications, drafts
+    case profile, account, about, shortcuts
+    case newDrawing = "new-drawing"
+    case themeLight = "theme-light"
+    case themeDark = "theme-dark"
+    case themeSystem = "theme-system"
 }

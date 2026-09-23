@@ -42,8 +42,8 @@ final class Site: ObservableObject {
     /// The site's toolbar is the one list of what each command does. On a page without it
     /// -- a replay -- a menu item does nothing; this used to load the command's page from a
     /// table of the site's routes kept here, a second copy of them to keep in step.
-    func command(_ name: String) {
-        evaluate(Scripts.siteCommand(name))
+    func command(_ command: SiteCommand) {
+        evaluate(Scripts.siteCommand(command))
     }
 
     func back() { evaluate("history.back();") }
@@ -360,14 +360,14 @@ struct SiteCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("menu.about".localized) { site.command("about") }
+            Button("menu.about".localized) { site.command(.about) }
         }
         CommandGroup(replacing: .appSettings) {
-            Button("menu.settings".localized) { site.command("account") }
+            Button("menu.settings".localized) { site.command(.account) }
                 .keyboardShortcut(",")
         }
         CommandGroup(replacing: .newItem) {
-            Button("menu.new_drawing".localized) { site.command("new-drawing") }
+            Button("menu.new_drawing".localized) { site.command(.newDrawing) }
                 .keyboardShortcut("n")
         }
         CommandGroup(replacing: .saveItem) {
@@ -378,26 +378,26 @@ struct SiteCommands: Commands {
             Divider()
             // The site's search, where an application keeps Find: the web view has no find
             // bar of its own, so the key is free.
-            Button("menu.search".localized) { site.command("search") }
+            Button("menu.search".localized) { site.command(.search) }
                 .keyboardShortcut("f")
         }
         CommandGroup(before: .toolbar) {
-            Button("menu.home".localized) { site.command("recent") }
+            Button("menu.home".localized) { site.command(.recent) }
                 .keyboardShortcut("1")
-            Button("menu.following".localized) { site.command("following") }
+            Button("menu.following".localized) { site.command(.following) }
                 .keyboardShortcut("2")
-            Button("menu.communities".localized) { site.command("communities") }
+            Button("menu.communities".localized) { site.command(.communities) }
                 .keyboardShortcut("3")
-            Button("menu.together".localized) { site.command("together") }
+            Button("menu.together".localized) { site.command(.together) }
                 .keyboardShortcut("4")
-            Button("menu.hashtags".localized) { site.command("hashtags") }
+            Button("menu.hashtags".localized) { site.command(.hashtags) }
                 .keyboardShortcut("5")
             Divider()
-            Button("menu.notifications".localized) { site.command("notifications") }
+            Button("menu.notifications".localized) { site.command(.notifications) }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
-            Button("menu.drafts".localized) { site.command("drafts") }
+            Button("menu.drafts".localized) { site.command(.drafts) }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
-            Button("menu.profile".localized) { site.command("profile") }
+            Button("menu.profile".localized) { site.command(.profile) }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
             Divider()
             Button("menu.back".localized) { site.back() }
@@ -408,14 +408,14 @@ struct SiteCommands: Commands {
                 .keyboardShortcut("r")
             Divider()
             Menu("menu.theme".localized) {
-                Button("menu.theme_light".localized) { site.command("theme-light") }
-                Button("menu.theme_dark".localized) { site.command("theme-dark") }
-                Button("menu.theme_system".localized) { site.command("theme-system") }
+                Button("menu.theme_light".localized) { site.command(.themeLight) }
+                Button("menu.theme_dark".localized) { site.command(.themeDark) }
+                Button("menu.theme_system".localized) { site.command(.themeSystem) }
             }
             Divider()
         }
         CommandGroup(replacing: .help) {
-            Button("menu.shortcuts".localized) { site.command("shortcuts") }
+            Button("menu.shortcuts".localized) { site.command(.shortcuts) }
                 .keyboardShortcut("/")
         }
     }

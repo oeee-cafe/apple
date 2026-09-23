@@ -296,7 +296,7 @@ final class WebTabController: NSObject, ObservableObject {
     private func givePushToken(_ token: String) {
         Task {
             _ = try? await webView.callAsyncJavaScript(
-                "window.oeeeApp && window.oeeeApp.pushToken && window.oeeeApp.pushToken(token);",
+                Scripts.pushToken,
                 arguments: ["token": token],
                 in: nil,
                 contentWorld: .page
