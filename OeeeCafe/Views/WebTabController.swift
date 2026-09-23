@@ -58,6 +58,8 @@ final class WebTabController: NSObject, ObservableObject {
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
     lazy var pencil = UIPencilInteraction(delegate: self)
     private var observers: [NSObjectProtocol] = []
+    /// The site's ground and grid behind the page, where the page does not reach.
+    private var grid: PageGrid?
     #endif
 
     override init() {
@@ -90,8 +92,9 @@ final class WebTabController: NSObject, ObservableObject {
         webView.allowsLinkPreview = false
         webView.underPageBackgroundColor = SiteChrome.ground
         #else
-        // Until the first page paints, the ground shows through (WebTabView's container)
-        // rather than a white web view.
+        // Until the first page paints, and wherever a page does not reach -- under the tab
+        // bar at its foot, past its ends when pulled -- the ground and its grid show through
+        // (PageGrid) rather than a white web view.
         webView.isOpaque = false
         webView.backgroundColor = .clear
         #endif
@@ -109,6 +112,7 @@ final class WebTabController: NSObject, ObservableObject {
         webView.uiDelegate = self
 
         #if os(iOS)
+        grid = PageGrid(under: webView.scrollView)
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.addInteraction(pencil)
         observers = [
