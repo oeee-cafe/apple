@@ -75,26 +75,31 @@ enum SupporterPack {
 
     /// Sells `identifier`, and hands what comes back to the site.
     ///
-    /// A purchase the person cancels and one the store leaves pending -- asking
-    /// a parent, say -- both end here saying nothing. The pending one is still
+    /// A purchase the person cancels, one the store leaves pending -- asking
+    /// a parent, say -- and one that fails hand the page nothing, and are
+    /// told to it as the way the press ended. The pending one is still
     /// unfinished when it goes through, so it is handed over the next time this
     /// page asks for prices, like anything else the site never heard about.
     static func buy(_ identifier: String, in webView: WKWebView) async {
         do {
             guard let product = try await Product.products(for: [identifier]).first else {
                 Logger.error("SupporterPack: the store has no \(identifier)")
+                await ended(.failed, in: webView)
                 return
             }
             switch try await product.purchase() {
             case .success(let verification):
                 await hand(over: [verification], in: webView)
-            case .userCancelled, .pending:
-                break
+            case .userCancelled:
+                await ended(.cancelled, in: webView)
+            case .pending:
+                await ended(.pending, in: webView)
             @unknown default:
-                break
+                await ended(.failed, in: webView)
             }
         } catch {
             Logger.error("SupporterPack: \(identifier) could not be bought: \(error)")
+            await ended(.failed, in: webView)
         }
     }
 
@@ -118,7 +123,30 @@ enum SupporterPack {
         for await entitlement in StoreKit.Transaction.currentEntitlements {
             entitlements.append(entitlement)
         }
+        guard !entitlements.isEmpty else {
+            await ended(.nothing, in: webView)
+            return
+        }
         await hand(over: entitlements, in: webView)
+    }
+
+    /// How a press ended when it hands the page no proof, for the page to say
+    /// (`oeeeApp.store.ended`, app_store.jinja in oeee-cafe/web). A press that
+    /// does hand proof over is told by the site's answer to it instead.
+    enum Ending: String {
+        case cancelled, pending, failed, nothing
+    }
+
+    private static func ended(_ ending: Ending, in webView: WKWebView) async {
+        _ = try? await webView.callAsyncJavaScript(
+            """
+            window.oeeeApp && window.oeeeApp.store && window.oeeeApp.store.ended \
+            && window.oeeeApp.store.ended(outcome);
+            """,
+            arguments: ["outcome": ending.rawValue],
+            in: nil,
+            contentWorld: .page
+        )
     }
 
     /// Gives the page these transactions' ids in one call, and finishes the
@@ -139,6 +167,13 @@ enum SupporterPack {
     ) async {
         let transactions = verifications.map(\.unsafePayloadValue)
         guard !transactions.isEmpty else { return }
+        if transactions.contains(where: { $0.environment == .xcode }) {
+            // Signed by Xcode's StoreKit testing (the scheme's OeeeCafe.storekit),
+            // not by Apple: the site asks Apple about the id and Apple has never
+            // heard of it, so the site refuses it. Testing the whole way through
+            // needs a sandbox purchase -- run without the StoreKit configuration.
+            Logger.error("SupporterPack: handing over a transaction made in Xcode's StoreKit testing, which the site cannot confirm")
+        }
         let answer: Any?
         do {
             answer = try await webView.callAsyncJavaScript(
