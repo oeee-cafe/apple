@@ -39,10 +39,6 @@ enum Scripts {
     /// Mac App Store, under the same bundle id and so with the same pack in it.
     static let markStore = "document.documentElement.setAttribute('data-store', 'apple');"
 
-    /// Takes down the skeleton the site slid in for a page that is not coming
-    /// (toolbar.jinja in oeee-cafe/web), so the page that was left shows again.
-    static let restoreContent = "window.oeeeApp && window.oeeeApp.restoreContent && window.oeeeApp.restoreContent();"
-
     /// Fingers pan and pinch in the painter; the pen draws (frontend/shared/appBridge.ts).
     static let preferPen = "window.oeeeApp && window.oeeeApp.painter && window.oeeeApp.painter.preferPen();"
 

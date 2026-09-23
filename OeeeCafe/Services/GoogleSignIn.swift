@@ -11,8 +11,8 @@ import AppKit
 ///
 /// The site's "Sign in with Google" is a link to `/auth/google`, which in a browser goes to
 /// Google's page and back. Google refuses its own sign-in pages inside an embedded web view
-/// (`disallowed_useragent`). So the tab stops the link and the page carries the sign-in
-/// (SignIn.swift, app_sign_in.jinja in oeee-cafe/web); this is the part only the app can
+/// (`disallowed_useragent`). So in the app the page takes the press itself and carries the
+/// sign-in (SignIn.swift, app_sign_in.jinja in oeee-cafe/web); this is the part only the app can
 /// do: Google's page in `ASWebAuthenticationSession` -- a browser of the system's, which is
 /// what Google asks an app to use, and which the person's Safari sign-ins are already in --
 /// with the nonce the page was given, and the code it comes back with traded for an ID
@@ -45,14 +45,6 @@ enum GoogleSignIn {
 
     private static let authorizeURL = "https://accounts.google.com/o/oauth2/v2/auth"
     private static let tokenURL = "https://oauth2.googleapis.com/token"
-
-    /// Whether `url` is the site's link to sign in with Google.
-    static func isSignInLink(_ navigationAction: WKNavigationAction, site: URL) -> Bool {
-        guard isAvailable, let url = navigationAction.request.url else { return false }
-        return url.host == site.host
-            && url.path == "/auth/google"
-            && (navigationAction.request.httpMethod ?? "GET") == "GET"
-    }
 
     /// Google's page, over the window of `webView`, for `nonce`, and what it came to.
     static func signIn(nonce: String, in webView: WKWebView) async -> SignIn.Told {

@@ -40,12 +40,6 @@ extension WebTabController: WKNavigationDelegate {
         #endif
     }
 
-    /// Where a sign-in link says to go on to afterwards (`?next=`).
-    private static func next(from url: URL) -> String? {
-        URLComponents(url: url, resolvingAgainstBaseURL: false)?
-            .queryItems?.first(where: { $0.name == "next" })?.value
-    }
-
     /// Whether a failed load is the site being out of reach -- no network, no answer --
     /// rather than a load the app or the page called off.
     private static func isUnreachable(_ error: Error) -> Bool {
@@ -64,19 +58,6 @@ extension WebTabController: WKNavigationDelegate {
         // Other sites (and mailto: etc.) open outside the app; embeds in frames load as usual.
         if isMainFrame && !(isWebURL && isSiteURL(url)) && url.scheme != "about" && url.scheme != "blob" && url.scheme != "data" {
             openOutside(url)
-            return .cancel
-        }
-        // Apple's sign-in page would open in Safari, away from this web view's session
-        // -- anything that is not this site is opened outside the app, just above -- so
-        // the page signs in with Apple's own sheet instead, on either platform (SignIn).
-        if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: APIConfig.shared.url) {
-            Task { await SignIn.begin("apple", next: Self.next(from: url), in: webView) }
-            return .cancel
-        }
-        // Google's, which Google refuses in a web view at all, on either platform: it
-        // signs in in a browser of the system's instead (GoogleSignIn).
-        if isMainFrame && GoogleSignIn.isSignInLink(navigationAction, site: APIConfig.shared.url) {
-            Task { await SignIn.begin("google", next: Self.next(from: url), in: webView) }
             return .cancel
         }
         if isMainFrame && isPainting {

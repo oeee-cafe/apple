@@ -10,20 +10,12 @@ import AppKit
 ///
 /// The site's "Sign in with Apple" is a link to `/auth/apple`, which in a browser goes to
 /// Apple's page and back. Here that would open Apple's page in Safari, and the answer would
-/// come back to Safari's cookies rather than the web view's. So the tab stops the link and
-/// the page carries the sign-in (SignIn.swift, app_sign_in.jinja in oeee-cafe/web); this is
-/// the part only the app can do, Apple's own sheet, which signs in with the nonce the page
+/// come back to Safari's cookies rather than the web view's. So in the app the page takes the
+/// press itself and carries the sign-in (SignIn.swift, app_sign_in.jinja in oeee-cafe/web);
+/// this is the part only the app can do, Apple's own sheet, which signs in with the nonce the page
 /// was given and answers with an ID token.
 @MainActor
 enum AppleSignIn {
-    /// Whether `url` is the site's link to sign in with Apple.
-    static func isSignInLink(_ navigationAction: WKNavigationAction, site: URL) -> Bool {
-        guard let url = navigationAction.request.url else { return false }
-        return url.host == site.host
-            && url.path == "/auth/apple"
-            && (navigationAction.request.httpMethod ?? "GET") == "GET"
-    }
-
     /// Apple's sheet, over the window of `webView`, for `nonce`, and what it came to.
     static func signIn(nonce: String, in webView: WKWebView) async -> SignIn.Told {
         let request = ASAuthorizationAppleIDProvider().createRequest()

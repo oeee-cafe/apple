@@ -419,9 +419,6 @@ final class WebTabController: NSObject, ObservableObject {
             isUnreachable = true
             return
         }
-        // The skeleton the site put up for the next page (toolbar.jinja) comes down at
-        // once rather than after its own timeout.
-        webView.evaluateJavaScript(Scripts.restoreContent)
         isMissingPage = true
         missingPageShown?.cancel()
         missingPageShown = Task { [weak self] in
