@@ -47,10 +47,6 @@ final class WebTabController: NSObject, ObservableObject {
     /// back-forward cache kept (see `pageSaid`).
     var restored = RestoredPage.none
 
-    /// The scripts this web view runs at the start of every page, apart from the text
-    /// scale, which changes (`installUserScripts`).
-    private let userScripts: [WKUserScript]
-
     #if os(iOS)
     let refreshControl = UIRefreshControl()
     /// The drawing a finger last landed on, as the page said (DrawingMenu).
@@ -75,15 +71,13 @@ final class WebTabController: NSObject, ObservableObject {
         // the same bundle id, with the same pack in it -- so the page marks
         // `data-store="apple"` and draws the Supporter Pack's buttons (app_store.jinja).
         configuration.applicationNameForUserAgent = "OeeeCafe/macos store/apple"
-        userScripts = SiteChrome.userScripts
         #else
         // The site knows the app by this, and marks its root `data-app="ios"`,
-        // `data-form="handheld"` -- the page scrolls whole and a new one is pushed like
-        // a screen -- and, for `store/apple`, `data-store="apple"`, so the Supporter
-        // Pack's buttons are drawn (theme_head.jinja and app_store.jinja in
-        // oeee-cafe/web).
+        // `data-form="handheld"` -- the page scrolls whole under the system's gestures --
+        // and, for `store/apple`, `data-store="apple"`, so the Supporter Pack's buttons
+        // are drawn (theme_head.jinja and app_store.jinja in oeee-cafe/web). It measures
+        // the reader's text size itself, from WebKit's system font.
         configuration.applicationNameForUserAgent = "OeeeCafe/ios store/apple"
-        userScripts = []
         #endif
 
         webView = WKWebView(frame: .zero, configuration: configuration)
@@ -109,7 +103,6 @@ final class WebTabController: NSObject, ObservableObject {
         SiteBridge.install(in: configuration.userContentController) { [weak self] message in
             self?.hear(message)
         }
-        installUserScripts()
         webView.navigationDelegate = self
         webView.uiDelegate = self
 
@@ -125,11 +118,6 @@ final class WebTabController: NSObject, ObservableObject {
                     guard let self, self.isPainting else { return }
                     self.showPencilOnly()
                 }
-            },
-            NotificationCenter.default.addObserver(
-                forName: UIContentSizeCategory.didChangeNotification, object: nil, queue: .main
-            ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.showTextScale() }
             },
         ]
         #endif
@@ -200,38 +188,9 @@ final class WebTabController: NSObject, ObservableObject {
         #endif
     }
 
-    // MARK: - Scripts
-
-    /// Puts this web view's scripts on every page from its start: its own, and the reader's
-    /// text size. WebKit can take its scripts away only all at once, so they are put back
-    /// all at once from this one list, rather than by sorting out which of the ones already
-    /// there to keep.
-    private func installUserScripts() {
-        let content = webView.configuration.userContentController
-        content.removeAllUserScripts()
-        userScripts.forEach(content.addUserScript)
-        #if os(iOS)
-        content.addUserScript(Scripts.atDocumentStart(Scripts.textScale(Self.textScale)))
-        #endif
-    }
+    // MARK: - Pencil
 
     #if os(iOS)
-    /// The reader's text size (Dynamic Type), as a multiple of the system's default body
-    /// size, for the site's type scale to follow (--oeee-text-scale, ds.css in
-    /// oeee-cafe/web). Said as it is: the site keeps it within what its layouts were drawn
-    /// for, so the largest accessibility sizes stop at twice the default there.
-    private static var textScale: Double {
-        let traits = UITraitCollection(preferredContentSizeCategory: UIApplication.shared.preferredContentSizeCategory)
-        let body = UIFontMetrics(forTextStyle: .body).scaledValue(for: 17, compatibleWith: traits)
-        return body / 17
-    }
-
-    /// Puts the reader's new text size on the pages to come, and on the page showing now.
-    private func showTextScale() {
-        installUserScripts()
-        webView.evaluateJavaScript(Scripts.textScale(Self.textScale))
-    }
-
     /// "Only Draw with Apple Pencil": fingers pan and pinch from the first stroke, rather
     /// than from the first time the painter sees a pen.
     func showPencilOnly() {
@@ -366,9 +325,6 @@ final class WebTabController: NSObject, ObservableObject {
         // is the page the painter was opened from.
         webView.scrollView.contentInsetAdjustmentBehavior = isPainting ? .never : .automatic
         pencil.isEnabled = isPainting
-        if isPainting {
-            webView.evaluateJavaScript(Scripts.holdScale)
-        }
         #endif
     }
 

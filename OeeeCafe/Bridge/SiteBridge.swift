@@ -25,7 +25,7 @@ enum SiteMessage: Equatable {
     case purchase(product: String)
     case restore
     case signIn(provider: String, nonce: String)
-    /// The Mac's window chrome (MacWindow.js), not the site: drag or zoom the window.
+    /// The Mac app's toolbar, which is its title bar: drag or zoom the window.
     case window(action: String)
     case words(Words)
 
@@ -63,8 +63,6 @@ enum SiteMessage: Equatable {
         var leaveBody = "Anything you have not saved will be lost."
         var leave = "Leave"
         var stay = "Stay"
-        var ok = "OK"
-        var cancel = "Cancel"
         var saveImage = "Save to Photos"
         var copyImage = "Copy"
         var share = "Share…"
@@ -73,7 +71,7 @@ enum SiteMessage: Equatable {
         init() {}
 
         private enum Key: String, CodingKey {
-            case leaveTitle, leaveBody, leave, stay, ok, cancel, saveImage, copyImage, share, copyLink
+            case leaveTitle, leaveBody, leave, stay, saveImage, copyImage, share, copyLink
         }
 
         init(from decoder: Decoder) throws {
@@ -87,8 +85,6 @@ enum SiteMessage: Equatable {
             leaveBody = word(.leaveBody, leaveBody)
             leave = word(.leave, leave)
             stay = word(.stay, stay)
-            ok = word(.ok, ok)
-            cancel = word(.cancel, cancel)
             saveImage = word(.saveImage, saveImage)
             copyImage = word(.copyImage, copyImage)
             share = word(.share, share)

@@ -5,27 +5,14 @@ import AppKit
 import UIKit
 #endif
 
-/// A page's alert(), confirm() and prompt(), and the app's own question before a drawing is
-/// left, shown over the web view's window.
+/// The app's own question before a drawing is left, shown over the web view's window --
+/// the one question the site cannot ask itself, since it is asked as the page goes. The
+/// site asks everything else in its own dialog (confirm_dialog.jinja in oeee-cafe/web),
+/// and calls neither alert() nor confirm(), so WKWebView is given no way to show them.
 ///
-/// Each is described once, the same on both platforms; only putting it on screen differs.
-/// What the app says in them itself is in the page's language, as the page last said it
-/// (SiteWords).
+/// Described once, the same on both platforms; only putting it on screen differs. What it
+/// says is in the page's language, as the page last said it (SiteWords).
 enum JavaScriptDialog {
-    static func alert(_ message: String, in webView: WKWebView) async {
-        _ = await show(Dialog(message: message, actions: [.ok]), in: webView)
-    }
-
-    static func confirm(_ message: String, in webView: WKWebView) async -> Bool {
-        await show(Dialog(message: message, actions: [.ok, .cancel]), in: webView)?.action == 0
-    }
-
-    /// The text entered, or nil when cancelled.
-    static func prompt(_ message: String, defaultText: String, in webView: WKWebView) async -> String? {
-        let answer = await show(Dialog(message: message, actions: [.ok, .cancel], field: defaultText), in: webView)
-        return answer?.action == 0 ? answer?.text ?? "" : nil
-    }
-
     /// Whether the reader means to leave a page that holds something unsaved. Staying is
     /// the default, so a reflexive Return keeps the drawing; and with nowhere to ask, the
     /// drawing stays too.
@@ -50,9 +37,6 @@ enum JavaScriptDialog {
         enum Role { case normal, cancel, destructive }
         let title: String
         let role: Role
-
-        static var ok: Action { Action(title: SiteWords.current.ok, role: .normal) }
-        static var cancel: Action { Action(title: SiteWords.current.cancel, role: .cancel) }
     }
 
     struct Dialog {
@@ -60,27 +44,23 @@ enum JavaScriptDialog {
         var message: String
         /// In the order a Mac lays them out, the first taking Return.
         var actions: [Action]
-        /// A prompt's text field, with the text it starts with.
-        var field: String?
         var isWarning = false
         /// Whether the first action is the one to lean on on iOS too, where it would
         /// otherwise sit wherever its role puts it.
         var prefersFirst = false
 
-        init(title: String? = nil, message: String, actions: [Action], field: String? = nil, isWarning: Bool = false, prefersFirst: Bool = false) {
+        init(title: String? = nil, message: String, actions: [Action], isWarning: Bool = false, prefersFirst: Bool = false) {
             self.title = title
             self.message = message
             self.actions = actions
-            self.field = field
             self.isWarning = isWarning
             self.prefersFirst = prefersFirst
         }
     }
 
-    /// Which action was chosen, and what the text field held.
+    /// Which action was chosen.
     struct Answer {
         let action: Int
-        let text: String
     }
 
     // MARK: - Showing it
@@ -101,14 +81,6 @@ enum JavaScriptDialog {
             let button = alert.addButton(withTitle: action.title)
             button.hasDestructiveAction = action.role == .destructive
         }
-        var field: NSTextField?
-        if let text = dialog.field {
-            let textField = NSTextField(string: text)
-            textField.frame = NSRect(x: 0, y: 0, width: 260, height: 24)
-            alert.accessoryView = textField
-            alert.window.initialFirstResponder = textField
-            field = textField
-        }
         let response: NSApplication.ModalResponse
         if let window = webView.window ?? NSApp.keyWindow ?? NSApp.mainWindow {
             response = await alert.beginSheetModal(for: window)
@@ -117,7 +89,7 @@ enum JavaScriptDialog {
         }
         let index = response.rawValue - NSApplication.ModalResponse.alertFirstButtonReturn.rawValue
         guard dialog.actions.indices.contains(index) else { return nil }
-        return Answer(action: index, text: field?.stringValue ?? "")
+        return Answer(action: index)
     }
     #else
     /// Over whatever is in front in the web view's window, or when the web view is not in
@@ -130,9 +102,6 @@ enum JavaScriptDialog {
         }
         return await withCheckedContinuation { continuation in
             let alert = UIAlertController(title: dialog.title, message: dialog.message, preferredStyle: .alert)
-            if let text = dialog.field {
-                alert.addTextField { $0.text = text }
-            }
             for (index, action) in dialog.actions.enumerated() {
                 let style: UIAlertAction.Style
                 switch action.role {
@@ -140,8 +109,8 @@ enum JavaScriptDialog {
                 case .cancel: style = .cancel
                 case .destructive: style = .destructive
                 }
-                let button = UIAlertAction(title: action.title, style: style) { [weak alert] _ in
-                    continuation.resume(returning: Answer(action: index, text: alert?.textFields?.first?.text ?? ""))
+                let button = UIAlertAction(title: action.title, style: style) { _ in
+                    continuation.resume(returning: Answer(action: index))
                 }
                 alert.addAction(button)
                 if index == 0 && dialog.prefersFirst {

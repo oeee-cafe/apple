@@ -25,34 +25,6 @@ extension WebTabController: WKUIDelegate {
         return nil
     }
 
-    // WKWebView shows none of alert(), confirm() or prompt() by itself: without these,
-    // alert() does nothing and confirm() answers "cancel", which htmx takes as "no".
-
-    func webView(
-        _ webView: WKWebView,
-        runJavaScriptAlertPanelWithMessage message: String,
-        initiatedByFrame frame: WKFrameInfo
-    ) async {
-        await JavaScriptDialog.alert(message, in: webView)
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        runJavaScriptConfirmPanelWithMessage message: String,
-        initiatedByFrame frame: WKFrameInfo
-    ) async -> Bool {
-        await JavaScriptDialog.confirm(message, in: webView)
-    }
-
-    func webView(
-        _ webView: WKWebView,
-        runJavaScriptTextInputPanelWithPrompt prompt: String,
-        defaultText: String?,
-        initiatedByFrame frame: WKFrameInfo
-    ) async -> String? {
-        await JavaScriptDialog.prompt(prompt, defaultText: defaultText ?? "", in: webView)
-    }
-
     #if os(iOS)
     /// A long press on a drawing: the app's own menu for it (DrawingMenu). Anywhere else the
     /// site lets a press through -- text fields, what people wrote -- WebKit's own.

@@ -322,14 +322,8 @@ enum SiteChrome {
         }
     }
 
-    /// What runs at the start of every page: the toolbar as the title bar (MacWindow.js),
-    /// and a right-click menu kept to where it is useful (QuietContextMenu.js).
-    static var userScripts: [WKUserScript] {
-        [Scripts.macWindow, Scripts.quietContextMenu].map { Scripts.atDocumentStart($0) }
-    }
-
-    /// The window's chrome asking to drag or zoom `window` (a `window` message on the
-    /// bridge, from MacWindow.js).
+    /// The page's toolbar asking to drag or zoom `window`, as a title bar's press does (a
+    /// `window` message on the bridge, theme_head.jinja in oeee-cafe/web).
     static func windowAsked(_ action: String, of window: NSWindow?) {
         guard let window else { return }
         switch action {
