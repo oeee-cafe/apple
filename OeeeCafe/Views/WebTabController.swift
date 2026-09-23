@@ -32,6 +32,11 @@ final class WebTabController: NSObject, ObservableObject {
     private var connectivity: AnyCancellable?
     /// Asked once a leave is already being asked about, so a second does not stack on it.
     private var isAskingToLeave = false
+    /// Who the page shown last said is signed in, or nil on a page that could not tell.
+    /// A tab already showing the new answer needs no reloading after a sign-in: it is the
+    /// page that said so (WebTabStore.authenticationChanged).
+    private(set) var lastSignedIn: Bool?
+
     /// Whether the last page arrived by Back or Forward, and so may be the copy the
     /// back-forward cache kept (see `pageSaid`).
     var restored = RestoredPage.none
@@ -305,6 +310,7 @@ final class WebTabController: NSObject, ObservableObject {
             }
         }
         if trusted, let signedIn = page.signedIn {
+            lastSignedIn = signedIn
             AuthService.shared.pageSaid(signedIn: signedIn)
         }
 

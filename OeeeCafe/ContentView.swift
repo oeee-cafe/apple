@@ -73,7 +73,7 @@ struct ContentView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             guard isReady else { return }
-            webTabs.authenticationChanged(visibleTabs: visibleTabs)
+            webTabs.authenticationChanged(visibleTabs: visibleTabs, signedIn: isAuthenticated)
             if !visibleTabs.contains(tabSelection) {
                 tabSelection = .home
             }
