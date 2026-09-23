@@ -7,10 +7,18 @@ import UIKit
 #endif
 
 /// The search tab: the native search field, with the site's results below it.
+///
+/// The field is the search role tab's own (ContentView), and iOS puts it where that
+/// release keeps search: in place of the tab bar on iOS 26, in the navigation bar on
+/// iOS 27. So the bar stays, empty as it looks on the tab that hides it; hidden, iOS 27
+/// has nowhere to show the field, and the tab opens with nothing to type in. Stepping
+/// into the tab hands the field the keyboard, rather than waiting to be tapped as well.
 struct SearchTabView: View {
-    let controller: WebTabController
+    @ObservedObject var controller: WebTabController
+    /// Whether this is the tab showing, which is when the field takes the keyboard.
+    let isSelected: Bool
     @State private var query = ""
-    @State private var hasSearched = false
+    @FocusState private var isSearching: Bool
 
     var body: some View {
         NavigationStack {
@@ -18,22 +26,27 @@ struct SearchTabView: View {
                 WebTabView(controller: controller)
                     .ignoresSafeArea(.container)
                     .unreachable(controller)
-                if !hasSearched {
+                if !controller.hasLoaded {
                     // Nothing searched for yet: the site's own ground, not the system's,
                     // over the whole of the tab -- the strip behind the clock with it.
                     ContentUnavailableView("tab.search".localized, systemImage: "magnifyingglass")
                         .background(Color("Ground").ignoresSafeArea())
                 }
             }
-            #if os(iOS)
-            .toolbar(.hidden, for: .navigationBar)
-            #endif
         }
         .searchable(text: $query)
+        .searchFocused($isSearching)
+        .onChange(of: isSelected, initial: true) { _, selected in
+            guard selected else { return }
+            // Asked for as the tab is being built, the focus has no field to land on yet:
+            // the next turn of the run loop does.
+            Task { @MainActor in
+                isSearching = true
+            }
+        }
         .onSubmit(of: .search) {
             let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !trimmed.isEmpty else { return }
-            hasSearched = true
             controller.search(trimmed)
         }
     }

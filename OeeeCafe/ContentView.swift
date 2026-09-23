@@ -49,7 +49,10 @@ struct ContentView: View {
                         webTab(.login)
                     }
                     Tab(WebTab.search.title, systemImage: WebTab.search.systemImage, value: WebTab.search, role: .search) {
-                        SearchTabView(controller: webTabs.controller(for: .search))
+                        SearchTabView(
+                            controller: webTabs.controller(for: .search),
+                            isSelected: tabSelection == .search
+                        )
                     }
                 }
             } else {
