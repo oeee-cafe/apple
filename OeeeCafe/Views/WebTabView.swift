@@ -6,13 +6,17 @@ import AppKit
 import UIKit
 #endif
 
-/// The search tab: the native search field, with the site's results below it.
+/// The search tab: the native search field, with the site's search page under it.
 ///
 /// The field is the search role tab's own (ContentView), and iOS puts it where that
 /// release keeps search: in place of the tab bar on iOS 26, in the navigation bar on
 /// iOS 27. So the bar stays, empty as it looks on the tab that hides it; hidden, iOS 27
 /// has nowhere to show the field, and the tab opens with nothing to type in. Stepping
 /// into the tab hands the field the keyboard, rather than waiting to be tapped as well.
+///
+/// What the page under it shows before anything is searched for is the site's own search
+/// page, which leaves its form out where a field like this one is above it (search.jinja
+/// in oeee-cafe/web).
 struct SearchTabView: View {
     @ObservedObject var controller: WebTabController
     /// Whether this is the tab showing, which is when the field takes the keyboard.
@@ -22,17 +26,9 @@ struct SearchTabView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack {
-                WebTabView(controller: controller)
-                    .ignoresSafeArea(.container)
-                    .unreachable(controller)
-                if !controller.hasLoaded {
-                    // Nothing searched for yet: the site's own ground, not the system's,
-                    // over the whole of the tab -- the strip behind the clock with it.
-                    ContentUnavailableView("tab.search".localized, systemImage: "magnifyingglass")
-                        .background(Color("Ground").ignoresSafeArea())
-                }
-            }
+            WebTabView(controller: controller)
+                .ignoresSafeArea(.container)
+                .unreachable(controller)
         }
         .searchable(text: $query)
         .searchFocused($isSearching)
@@ -60,13 +56,13 @@ struct WebTabView: NSViewRepresentable {
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
-        attach(to: container)
+        Self.attach(controller.webView, to: container)
         return container
     }
 
     func updateNSView(_ container: NSView, context: Context) {
         if controller.webView.superview !== container {
-            attach(to: container)
+            Self.attach(controller.webView, to: container)
         }
     }
 }
@@ -78,35 +74,55 @@ struct WebTabView: NSViewRepresentable {
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
 
-    func makeUIView(context: Context) -> UIView {
-        let container = UIView()
-        attach(to: container)
-        return container
+    func makeUIView(context: Context) -> Container { Container(controller: controller) }
+
+    func updateUIView(_ container: Container, context: Context) {
+        container.takeWebView()
     }
 
-    func updateUIView(_ container: UIView, context: Context) {
-        if controller.webView.superview !== container {
-            attach(to: container)
+    /// Every tab shows the same web view, and a view can only be in one place: the
+    /// container the reader is looking at takes it, and takes it when it is put on screen
+    /// rather than when SwiftUI happens to ask. A tab left behind is asked too -- it is
+    /// still built, off screen -- and taking it back there is what left the tab stepped
+    /// into with nothing in it.
+    final class Container: UIView {
+        private let controller: WebTabController
+
+        init(controller: WebTabController) {
+            self.controller = controller
+            super.init(frame: .zero)
+            // The web view draws no ground of its own (WebTabController), so this is what
+            // shows behind the status bar, in whichever of the two the site's theme put the
+            // window in (SiteTheme). Not the web view's `underPageBackgroundColor`: a web
+            // view that draws no background has none to give -- it is transparent, and
+            // stays so -- so asking it left the strip behind the clock black.
+            backgroundColor = UIColor(named: "Ground")
+        }
+
+        @available(*, unavailable)
+        required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            takeWebView()
+        }
+
+        func takeWebView() {
+            guard window != nil, controller.webView.superview !== self else { return }
+            WebTabView.attach(controller.webView, to: self)
         }
     }
 }
 #endif
 
 extension WebTabView {
-    private func attach(to container: PlatformView) {
-        let webView = controller.webView
+    static func attach(_ webView: WKWebView, to container: PlatformView) {
         webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(webView)
         #if os(macOS)
         let top = container.topAnchor
         #else
-        // The web view draws no ground of its own (WebTabController), so this is what shows
-        // behind the status bar, in whichever of the two the site's theme put the window in
-        // (SiteTheme). Not the web view's `underPageBackgroundColor`: a web view that draws
-        // no background has none to give -- it is transparent, and stays so -- so asking it
-        // left the strip behind the clock black.
-        container.backgroundColor = UIColor(named: "Ground")
         let top = container.safeAreaLayoutGuide.topAnchor
         #endif
         NSLayoutConstraint.activate([

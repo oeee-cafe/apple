@@ -12,25 +12,28 @@ import Combine
 
 struct ContentView: View {
     @EnvironmentObject var authService: AuthService
-    @StateObject private var webTabs = WebTabStore()
+    /// The app's one web view. The tab bar picks the section it shows; it says which
+    /// section that turned out to be, and the bar draws that one (WebTabController).
+    @StateObject private var web = WebTabController()
     @StateObject private var unread = UnreadCount.shared
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
     @State private var isReady = false
-    @State private var tabSelection: WebTab = .home
 
     private var visibleTabs: [WebTab] {
         WebTab.visible(isAuthenticated: authService.isAuthenticated)
     }
 
-    /// Selecting the already selected tab takes it back to its top.
+    /// The tab the reader is in: the section of the page showing, or home for a page whose
+    /// section has no tab of theirs. Picking the tab they are in takes them back to its top.
     private var selection: Binding<WebTab> {
         Binding(
-            get: { tabSelection },
+            get: { visibleTabs.contains(web.section) ? web.section : .home },
             set: { tab in
-                if tab == tabSelection {
-                    webTabs.controller(for: tab).reselect()
+                if tab == web.section {
+                    web.reselect()
+                } else {
+                    web.show(tab)
                 }
-                tabSelection = tab
             }
         )
     }
@@ -49,10 +52,7 @@ struct ContentView: View {
                         webTab(.login)
                     }
                     Tab(WebTab.search.title, systemImage: WebTab.search.systemImage, value: WebTab.search, role: .search) {
-                        SearchTabView(
-                            controller: webTabs.controller(for: .search),
-                            isSelected: tabSelection == .search
-                        )
+                        SearchTabView(controller: web, isSelected: web.section == .search)
                     }
                 }
             } else {
@@ -62,9 +62,10 @@ struct ContentView: View {
             }
         }
         .task {
-            // Carries over a session signed in natively before showing any tab.
+            // Carries over a session signed in natively before anything is fetched.
             await WebSession.shared.start()
             Task { await AuthService.shared.checkOnce() }
+            web.start()
             isReady = true
             // Before asking about notifications: a page waiting to be opened is what the
             // reader came for, and does not wait behind a permission they may sit on.
@@ -73,10 +74,7 @@ struct ContentView: View {
         }
         .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
             guard isReady else { return }
-            webTabs.authenticationChanged(visibleTabs: visibleTabs, signedIn: isAuthenticated)
-            if !visibleTabs.contains(tabSelection) {
-                tabSelection = .home
-            }
+            web.authenticationChanged(signedIn: isAuthenticated)
             Task { await authenticationChanged(isAuthenticated) }
         }
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
@@ -91,7 +89,7 @@ struct ContentView: View {
 
     private func webTab(_ tab: WebTab) -> some TabContent<WebTab> {
         Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-            WebTabContent(controller: webTabs.controller(for: tab))
+            WebTabContent(controller: web)
         }
         .badge(tab == .notifications ? unread.count : 0)
     }
@@ -109,14 +107,8 @@ struct ContentView: View {
     private func openPendingNavigation() {
         guard isReady, let pending = navigationCoordinator.pendingNavigation else { return }
         navigationCoordinator.clearPendingNavigation()
-        guard visibleTabs.contains(pending.tab), let url = pending.url else { return }
-        tabSelection = pending.tab
-        let controller = webTabs.controller(for: pending.tab)
-        if pending.fresh {
-            controller.load(url)
-        } else {
-            controller.show(url)
-        }
+        guard let url = pending.url else { return }
+        web.load(url)
     }
 }
 

@@ -10,7 +10,7 @@ import SafariServices
 /// outside the app, and a page holding a drawing asks before it is left.
 extension WebTabController: WKNavigationDelegate {
     func isSiteURL(_ url: URL) -> Bool {
-        url.host == tab.rootURL.host
+        url.host == APIConfig.shared.url.host
     }
 
     /// Another site, or another kind of link. On the Mac, the reader's browser. On iOS a web
@@ -69,13 +69,13 @@ extension WebTabController: WKNavigationDelegate {
         // Apple's sign-in page would open in Safari, away from this web view's session
         // -- anything that is not this site is opened outside the app, just above --
         // so the app signs in with Apple's own sheet instead, on either platform.
-        if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
+        if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: APIConfig.shared.url) {
             Task { await AppleSignIn.signIn(in: webView, next: Self.next(from: url)) }
             return .cancel
         }
         // Google's, which Google refuses in a web view at all, on either platform: it
         // signs in in a browser of the system's instead (GoogleSignIn).
-        if isMainFrame && GoogleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
+        if isMainFrame && GoogleSignIn.isSignInLink(navigationAction, site: APIConfig.shared.url) {
             Task { await GoogleSignIn.signIn(in: webView, next: Self.next(from: url)) }
             return .cancel
         }
@@ -103,7 +103,7 @@ extension WebTabController: WKNavigationDelegate {
         if Self.isUnreachable(error) {
             pageUnreachable()
         }
-        Logger.warning("WebTab \(tab.rawValue): Failed to load - \(error.localizedDescription)", category: Logger.network)
+        Logger.warning("WebTab: Failed to load - \(error.localizedDescription)", category: Logger.network)
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

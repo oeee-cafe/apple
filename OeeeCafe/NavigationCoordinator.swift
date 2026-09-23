@@ -6,36 +6,24 @@ import Combine
 class NavigationCoordinator: ObservableObject {
     static let shared = NavigationCoordinator()
 
-    /// A page to open from outside the app, and the tab to open it in.
+    /// A page to open from outside the app.
     @Published var pendingNavigation: PendingNavigation?
 
     private init() {}
 
     struct PendingNavigation: Equatable {
-        let tab: WebTab
         let path: String
-        /// Whether the page is to be fetched again. A page opened from outside the app is
-        /// what the reader came for, and is shown afresh; a section they stepped into from
-        /// another tab is left as its tab had it, where they were in it and all.
-        var fresh = true
 
         var url: URL? {
             URL(string: APIConfig.shared.baseURL + path)
         }
     }
 
-    /// A page of the site, by its path (with any query), shown in the tab it belongs to.
+    /// A page of the site, by its path (with any query). The web view shows it, and the
+    /// tab bar draws whichever section it turns out to be in (WebTabController.section).
     func open(path: String) {
-        let tab = WebTab.showing(path: URLComponents(string: path)?.path ?? path)
-        Logger.debug("NavigationCoordinator: Opening \(path) in \(tab.rawValue) tab", category: Logger.app)
-        pendingNavigation = PendingNavigation(tab: tab, path: path)
-    }
-
-    /// A section of the site with a tab of its own, reached from another tab: the reader
-    /// is taken to the tab it is, which shows it already or is sent to it.
-    func show(section tab: WebTab) {
-        Logger.debug("NavigationCoordinator: Showing the \(tab.rawValue) tab, its own section", category: Logger.app)
-        pendingNavigation = PendingNavigation(tab: tab, path: tab.path, fresh: false)
+        Logger.debug("NavigationCoordinator: Opening \(path)", category: Logger.app)
+        pendingNavigation = PendingNavigation(path: path)
     }
 
     /// A link to the site from outside the app.

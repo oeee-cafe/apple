@@ -9,4 +9,7 @@ class APIConfig {
     /// that or take it back any more, so a device left pointed at a staging server would
     /// stay there for good, and it is no longer read.
     let baseURL = "https://oeee.cafe"
+
+    /// The site itself, which every page of it is under.
+    var url: URL { URL(string: baseURL)! }
 }

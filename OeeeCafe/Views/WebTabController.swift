@@ -5,17 +5,19 @@ import WebKit
 import UIKit
 #endif
 
-/// One tab's web view (the Mac's only one), and what the app knows of the page in it.
+/// The app's one web view, and what the app knows of the page in it.
 ///
 /// Split by what each part answers to: this file is the page's state and what the site says
 /// about it (SiteBridge); WebTabController+Navigation.swift is where links may go;
 /// WebTabController+UI.swift is WebKit asking for windows, dialogs and menus; Pencil.swift
 /// is Apple Pencil in the painter.
 final class WebTabController: NSObject, ObservableObject {
-    /// Which tab this web view serves. It can change once: the tab somebody signs in on
-    /// goes away when they are signed in, and rather than throw the page away the web
-    /// view is handed to the tab they are sent to (WebTabStore.authenticationChanged).
-    private(set) var tab: WebTab
+    /// The section the page showing belongs to, which is the tab the tab bar draws as the
+    /// one the reader is in (ContentView). The site says where every page is (SiteBridge),
+    /// so the bar follows the page rather than the two being told separately -- which is
+    /// what let them disagree, the toolbar's sections and the tab bar's being the same
+    /// places by two ways in.
+    @Published private(set) var section = WebTab.home
     let webView: WKWebView
     /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
     /// not left without asking.
@@ -35,14 +37,10 @@ final class WebTabController: NSObject, ObservableObject {
     private var connectivity: AnyCancellable?
     /// Asked once a leave is already being asked about, so a second does not stack on it.
     private var isAskingToLeave = false
-    /// Takes over another tab, keeping the page, its history and its scroll where they are.
-    func adopt(tab: WebTab) {
-        self.tab = tab
-    }
 
     /// Who the page shown last said is signed in, or nil on a page that could not tell.
-    /// A tab already showing the new answer needs no reloading after a sign-in: it is the
-    /// page that said so (WebTabStore.authenticationChanged).
+    /// A page already showing the new answer needs no reloading after a sign-in: it is the
+    /// page that said so (`authenticationChanged`).
     private(set) var lastSignedIn: Bool?
 
     /// Whether the last page arrived by Back or Forward, and so may be the copy the
@@ -62,9 +60,7 @@ final class WebTabController: NSObject, ObservableObject {
     private var observers: [NSObjectProtocol] = []
     #endif
 
-    init(tab: WebTab) {
-        self.tab = tab
-
+    override init() {
         let configuration = WKWebViewConfiguration()
         configuration.websiteDataStore = WebSession.shared.dataStore
         #if os(iOS)
@@ -137,11 +133,13 @@ final class WebTabController: NSObject, ObservableObject {
             guard let self, self.isUnreachable else { return }
             self.retry()
         }
+    }
 
-        // Search shows nothing until something is searched for.
-        if tab != .search {
-            load(tab.rootURL)
-        }
+    /// Shows the site's first page. Asked for rather than done on its own, so that whoever
+    /// was signed in natively has been picked up before anything is fetched (WebSession).
+    func start() {
+        guard webView.url == nil else { return }
+        load(WebTab.home.rootURL)
     }
 
     func load(_ url: URL) {
@@ -149,35 +147,39 @@ final class WebTabController: NSObject, ObservableObject {
         webView.load(URLRequest(url: url))
     }
 
-    /// Shows `url`, unless the page showing is already it: a tab stepped into keeps where
-    /// the reader was in it.
-    func show(_ url: URL) {
-        guard !hasLoaded || webView.url != url else { return }
-        load(url)
+    /// A section picked in the tab bar: its own page, unless that is the page showing --
+    /// searched-for results are the search tab's page as much as the empty field is.
+    func show(_ section: WebTab) {
+        guard webView.url?.path != section.path else { return }
+        // The bar follows the tap at once rather than waiting out a fetch; where the page
+        // says it is, when it arrives, is what stands (`pageSaid`).
+        self.section = section
+        load(section.rootURL)
     }
 
     /// Tries the page that could not be reached again.
     func retry() {
         isUnreachable = false
-        load(requestedURL ?? webView.url ?? tab.rootURL)
+        load(requestedURL ?? webView.url ?? WebTab.home.rootURL)
     }
 
     /// Shows the site's results for `query` (`/search?q=`).
     func search(_ query: String) {
-        var components = URLComponents(url: tab.rootURL, resolvingAgainstBaseURL: false)
+        var components = URLComponents(url: WebTab.search.rootURL, resolvingAgainstBaseURL: false)
         components?.queryItems = [URLQueryItem(name: "q", value: query)]
         if let url = components?.url {
             load(url)
         }
     }
 
-    /// Tapping the selected tab again: scroll to the top, or go back to the tab's own page.
+    /// Tapping the selected tab again: scroll to the top, or go back to the section's own
+    /// page from wherever in it the reader has got to.
     func reselect() {
         #if os(macOS)
         Task {
             let scrolled = try? await webView.evaluateJavaScript(Scripts.scrollToTop) as? Bool
-            if scrolled != true && webView.url?.path != tab.path {
-                load(tab.rootURL)
+            if scrolled != true && webView.url?.path != section.path {
+                load(section.rootURL)
             }
         }
         #else
@@ -185,13 +187,22 @@ final class WebTabController: NSObject, ObservableObject {
         let top = -scrollView.adjustedContentInset.top
         if scrollView.contentOffset.y > top + 1 {
             scrollView.setContentOffset(CGPoint(x: 0, y: top), animated: true)
-        } else if webView.url?.path != tab.path {
-            load(tab.rootURL)
+        } else if webView.url?.path != section.path {
+            load(section.rootURL)
         }
         #endif
     }
 
-    /// Lets the tab go: nothing it registered outlives it.
+    /// After signing in or out, the page showing was rendered for whoever was signed in
+    /// before -- unless it is the page that said so, which is where signing in ends and
+    /// which carries the notice that it worked. Reloading that one would throw the notice
+    /// away for nothing.
+    func authenticationChanged(signedIn: Bool) {
+        guard lastSignedIn != signedIn else { return }
+        webView.reload()
+    }
+
+    /// Lets the web view go: nothing it registered outlives it.
     func tearDown() {
         webView.configuration.userContentController.removeAllScriptMessageHandlers()
         webView.stopLoading()
@@ -322,39 +333,13 @@ final class WebTabController: NSObject, ObservableObject {
             AuthService.shared.pageSaid(signedIn: signedIn)
         }
 
-        #if os(iOS)
-        showSection(page.path)
-        #endif
-    }
-
-    #if os(iOS)
-    /// A tab's own page arriving in another tab -- the site's toolbar has the sections of
-    /// the tab bar in it, and swaps one in wherever it is tapped -- moves the reader to the
-    /// tab it belongs to, and this tab back to the page it was showing. The two ways to a
-    /// section, the tab bar and the toolbar, then never say different things about where
-    /// the reader is. (The Mac has no tabs: there the toolbar is the only way.)
-    private func showSection(_ path: String) {
-        let visible = WebTab.visible(isAuthenticated: AuthService.shared.isAuthenticated)
-        // Not when this tab is the one going away. Signing in is done on the sign-in tab
-        // and ends on a page belonging to another -- the home page, usually -- which is
-        // this every time somebody signs in. The web view is about to be handed to the
-        // tab they are sent to, showing that page and the notice on it
-        // (WebTabStore.authenticationChanged); sending it back here would take the page
-        // away first, and they would arrive at a tab that had to fetch its own again.
-        guard visible.contains(tab) else { return }
-        guard let owner = WebTab.owning(path: path), owner != tab, visible.contains(owner)
-        else { return }
-        Logger.debug("WebTab \(tab.rawValue): \(path) is the \(owner.rawValue) tab's own page", category: Logger.app)
-        NavigationCoordinator.shared.show(section: owner)
-        // The toolbar's link was boosted: the section is in this web view already, and its
-        // history entry with it, so the way back to the page under it is the way back.
-        if webView.canGoBack {
-            webView.goBack()
-        } else {
-            load(tab.rootURL)
+        // Wherever the page came from -- a tab, the site's own toolbar, a link in what
+        // somebody wrote, Back -- the bar draws the section it is in, and a page that is
+        // nobody's section leaves the bar on the one it was opened from.
+        if let section = WebTab.showing(path: page.path) {
+            self.section = section
         }
     }
-    #endif
 
     /// In the painter a swipe from the edge or down from the top is a stroke, not a way off
     /// the page; and a page the site says may not be reloaded is not pulled down to reload.

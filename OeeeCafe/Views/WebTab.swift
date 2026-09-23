@@ -48,22 +48,16 @@ enum WebTab: String, CaseIterable {
         URL(string: APIConfig.shared.baseURL + path)!
     }
 
-    /// The tab whose own page this is: a tab's root, and nothing below it. A page deeper
-    /// in the site is a screen pushed onto whichever tab it was opened from, and belongs
-    /// to no tab of its own.
-    static func owning(path: String) -> WebTab? {
-        let here = path.count > 1 && path.hasSuffix("/") ? String(path.dropLast()) : path
-        return allCases.first { $0.path == here }
-    }
-
-    /// The tab a page of the site belongs in, by where it is: notifications and
-    /// communities have tabs of their own, and everything else is found from home.
-    static func showing(path: String) -> WebTab {
-        if path.hasPrefix(WebTab.notifications.path) {
-            return .notifications
-        } else if path.hasPrefix(WebTab.communities.path) {
-            return .communities
-        }
-        return .home
+    /// The tab a page of the site belongs in: the sections with a tab of their own carry
+    /// everything below them, and home is the site's own front page.
+    ///
+    /// Nil for a page that is nobody's section -- a drawing, a profile, what somebody
+    /// wrote, the pages the toolbar has and the tab bar does not. Those are read in
+    /// whichever section they were opened from, and leave the bar where it is, as stepping
+    /// into one used to leave the reader in the tab they stepped from.
+    static func showing(path: String) -> WebTab? {
+        let here = path.isEmpty ? "/" : path
+        if here == home.path { return .home }
+        return [.notifications, .communities, .login, .search].first { here.hasPrefix($0.path) }
     }
 }

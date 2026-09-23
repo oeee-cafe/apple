@@ -22,7 +22,9 @@ final class Site: ObservableObject {
     /// Makes the web view once whoever is signed in on the web views has been picked up.
     func start() {
         guard controller == nil else { return }
-        controller = WebTabController(tab: .home)
+        let controller = WebTabController()
+        controller.start()
+        self.controller = controller
         listenForSideButtons()
     }
 
