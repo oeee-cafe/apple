@@ -27,6 +27,7 @@ final class Site: ObservableObject {
         controller.start()
         self.controller = controller
         listenForSideButtons()
+        listenForFullScreenKey()
     }
 
     func load(_ url: URL) {
@@ -74,6 +75,26 @@ final class Site: ObservableObject {
                 return true
             }
             return ours ? nil : event
+        }
+    }
+
+    /// ⌃⌘F, full screen's key before fn-F. The View menu's Enter Full Screen, which AppKit
+    /// adds, answers only fn-F now, and a Mac user's hands still know the older key.
+    private var fullScreenKey: Any?
+
+    private func listenForFullScreenKey() {
+        guard fullScreenKey == nil else { return }
+        fullScreenKey = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
+            let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
+            guard flags == [.command, .control],
+                  event.charactersIgnoringModifiers?.lowercased() == "f"
+            else { return event }
+            let toggled = MainActor.assumeIsolated { () -> Bool in
+                guard let window = event.window ?? NSApp.keyWindow else { return false }
+                window.toggleFullScreen(nil)
+                return true
+            }
+            return toggled ? nil : event
         }
     }
 
