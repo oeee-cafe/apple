@@ -390,7 +390,7 @@ struct SiteCommands: Commands {
                 .keyboardShortcut("f")
         }
         CommandGroup(before: .toolbar) {
-            Button("menu.recent".localized) { site.command("recent") }
+            Button("menu.home".localized) { site.command("recent") }
                 .keyboardShortcut("1")
             Button("menu.following".localized) { site.command("following") }
                 .keyboardShortcut("2")

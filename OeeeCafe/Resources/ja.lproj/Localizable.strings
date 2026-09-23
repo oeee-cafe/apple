@@ -4,7 +4,7 @@
 "menu.new_drawing" = "新規お絵かき";
 "menu.close_window" = "ウインドウを閉じる";
 "menu.search" = "検索…";
-"menu.recent" = "新着";
+"menu.home" = "ホーム";
 "menu.following" = "タイムライン";
 "menu.communities" = "コミュニティ";
 "menu.together" = "一緒に描く";
