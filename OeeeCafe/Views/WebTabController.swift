@@ -364,6 +364,15 @@ final class WebTabController: NSObject, ObservableObject {
         webView.scrollView.refreshControl = isRefreshable && !isPainting ? refreshControl : nil
         // Pages shorter than the screen can be pulled too.
         webView.scrollView.alwaysBounceVertical = !isPainting
+        // A page is laid out in what the scroll view leaves unobscured, and the scroll view
+        // keeps the strip above the home indicator to itself: a page that ends at the
+        // screen's bottom edge is read past it, and a list's last row is not under the bar
+        // the finger swipes up from. The painter is not read but filled, and it is given
+        // the whole screen already -- no tab bar, no status bar (WebTabContent) -- so that
+        // strip is the one place left where the screen is not the painter's. Nothing paints
+        // it: the web view draws no ground of its own, so what was there stays there, which
+        // is the page the painter was opened from.
+        webView.scrollView.contentInsetAdjustmentBehavior = isPainting ? .never : .automatic
         pencil.isEnabled = isPainting
         if isPainting {
             webView.evaluateJavaScript(Scripts.holdScale)
