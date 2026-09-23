@@ -25,6 +25,18 @@ enum Scripts {
     static let quietContextMenu = bundled("QuietContextMenu")
     #endif
 
+    #if os(iOS)
+    /// Says this build can sell the Supporter Pack, before the page paints, so
+    /// the buy buttons on /supporter are never drawn where nothing could
+    /// answer them and never flash in after the fact (style.css in
+    /// oeee-cafe/web). The Steam app says the same thing about itself with
+    /// data-steam-app.
+    ///
+    /// The Mac build says nothing: it is not sold through the Mac App Store,
+    /// so it has no store to ask.
+    static let markStore = "document.documentElement.setAttribute('data-store', 'apple');"
+    #endif
+
     /// Takes down the skeleton the site slid in for a page that is not coming
     /// (toolbar.jinja in oeee-cafe/web), so the page that was left shows again.
     static let restoreContent = "window.oeeeRestoreContent && window.oeeeRestoreContent();"

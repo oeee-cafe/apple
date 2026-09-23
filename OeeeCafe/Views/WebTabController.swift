@@ -202,6 +202,7 @@ final class WebTabController: NSObject, ObservableObject {
         userScripts.forEach(content.addUserScript)
         #if os(iOS)
         content.addUserScript(Scripts.atDocumentStart(Scripts.textScale(Self.textScale)))
+        content.addUserScript(Scripts.atDocumentStart(Scripts.markStore))
         #endif
     }
 
@@ -270,6 +271,24 @@ final class WebTabController: NSObject, ObservableObject {
         case .painterReady:
             #if os(iOS)
             showPencilOnly()
+            #endif
+        case .prices(let store, let products):
+            #if os(iOS)
+            guard store == "apple" else { break }
+            Task { await SupporterPack.prices(of: products, in: webView) }
+            #else
+            _ = (store, products)
+            #endif
+        case .purchase(let purchase):
+            #if os(iOS)
+            guard purchase.store == "apple" else { break }
+            Task { await SupporterPack.buy(purchase.product, in: webView) }
+            #else
+            _ = purchase
+            #endif
+        case .restore:
+            #if os(iOS)
+            Task { await SupporterPack.restore(in: webView) }
             #endif
         }
     }
