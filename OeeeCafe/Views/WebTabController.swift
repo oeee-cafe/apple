@@ -334,8 +334,15 @@ final class WebTabController: NSObject, ObservableObject {
     /// section, the tab bar and the toolbar, then never say different things about where
     /// the reader is. (The Mac has no tabs: there the toolbar is the only way.)
     private func showSection(_ path: String) {
-        guard let owner = WebTab.owning(path: path), owner != tab,
-              WebTab.visible(isAuthenticated: AuthService.shared.isAuthenticated).contains(owner)
+        let visible = WebTab.visible(isAuthenticated: AuthService.shared.isAuthenticated)
+        // Not when this tab is the one going away. Signing in is done on the sign-in tab
+        // and ends on a page belonging to another -- the home page, usually -- which is
+        // this every time somebody signs in. The web view is about to be handed to the
+        // tab they are sent to, showing that page and the notice on it
+        // (WebTabStore.authenticationChanged); sending it back here would take the page
+        // away first, and they would arrive at a tab that had to fetch its own again.
+        guard visible.contains(tab) else { return }
+        guard let owner = WebTab.owning(path: path), owner != tab, visible.contains(owner)
         else { return }
         Logger.debug("WebTab \(tab.rawValue): \(path) is the \(owner.rawValue) tab's own page", category: Logger.app)
         NavigationCoordinator.shared.show(section: owner)
