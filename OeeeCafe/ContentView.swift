@@ -12,8 +12,8 @@ import Combine
 
 struct ContentView: View {
     @EnvironmentObject var authService: AuthService
-    /// The app's one web view. The tab bar picks the section it shows; it says which
-    /// section that turned out to be, and the bar draws that one (WebTabController).
+    /// The app's one web view. The tab bar picks the section it shows, and nothing else
+    /// moves the bar (WebTabController).
     @StateObject private var web = WebTabController()
     @StateObject private var unread = UnreadCount.shared
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
@@ -23,8 +23,8 @@ struct ContentView: View {
         WebTab.visible(isAuthenticated: authService.isAuthenticated)
     }
 
-    /// The tab the reader is in: the section of the page showing, or home for a page whose
-    /// section has no tab of theirs. Picking the tab they are in takes them back to its top.
+    /// The tab the reader is in: the one last picked, or home when that tab is no longer
+    /// theirs -- the sign-in tab, once they are signed in. Picking the tab they are in takes them back to its top.
     private var selection: Binding<WebTab> {
         Binding(
             get: { visibleTabs.contains(web.section) ? web.section : .home },

@@ -12,11 +12,9 @@ import UIKit
 /// WebTabController+UI.swift is WebKit asking for windows, dialogs and menus; Pencil.swift
 /// is Apple Pencil in the painter.
 final class WebTabController: NSObject, ObservableObject {
-    /// The section the page showing belongs to, which is the tab the tab bar draws as the
-    /// one the reader is in (ContentView). The site says where every page is (SiteBridge),
-    /// so the bar follows the page rather than the two being told separately -- which is
-    /// what let them disagree, the toolbar's sections and the tab bar's being the same
-    /// places by two ways in.
+    /// The tab last picked in the tab bar, which it draws as the one the reader is in
+    /// (ContentView). Only a tap moves it: a page reached some other way -- the site's own
+    /// toolbar, a link, Back, a notification -- is read under whichever tab was picked last.
     @Published private(set) var section = WebTab.home
     let webView: WKWebView
     /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
@@ -166,8 +164,7 @@ final class WebTabController: NSObject, ObservableObject {
     /// searched-for results are the search tab's page as much as the empty field is.
     func show(_ section: WebTab) {
         guard webView.url?.path != section.path else { return }
-        // The bar follows the tap at once rather than waiting out a fetch; where the page
-        // says it is, when it arrives, is what stands (`pageSaid`).
+        // The bar follows the tap at once rather than waiting out a fetch.
         self.section = section
         load(section.rootURL)
     }
@@ -354,13 +351,6 @@ final class WebTabController: NSObject, ObservableObject {
         if trusted, let signedIn = page.signedIn {
             lastSignedIn = signedIn
             AuthService.shared.pageSaid(signedIn: signedIn)
-        }
-
-        // Wherever the page came from -- a tab, the site's own toolbar, a link in what
-        // somebody wrote, Back -- the bar draws the section it is in, and a page that is
-        // nobody's section leaves the bar on the one it was opened from.
-        if let section = WebTab.showing(path: page.path) {
-            self.section = section
         }
     }
 
