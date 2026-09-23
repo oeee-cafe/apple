@@ -176,6 +176,13 @@ enum AppleSignIn {
             self.anchor = anchor
         }
 
+        /// `performRequests()` reports a priority inversion: it sets Apple's side of the
+        /// flow up before it returns, waiting on a worker of AuthenticationServices' own at
+        /// the default quality of service, and the main thread that called it is
+        /// user-interactive. The wait is the framework's and there is no reaching it. Asking
+        /// from a lower quality of service would mean starting the flow away from the main
+        /// thread, which is the one place it can be started from: the delegate and the
+        /// presentation anchor are both `@MainActor`, and the controller is not sendable.
         func perform(_ request: ASAuthorizationAppleIDRequest) async throws -> ASAuthorizationAppleIDCredential {
             try await withCheckedThrowingContinuation { continuation in
                 self.continuation = continuation

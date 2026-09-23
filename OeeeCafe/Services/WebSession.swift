@@ -35,18 +35,37 @@ final class WebSession {
     }
 
     /// HTTPCookieStorage keeps its cookies on disk and reaches them through a worker of its
-    /// own, running no higher than the thread that asked. Asked from the main thread -- and
-    /// `start()` is called from a view's `task`, so it is the main thread -- the interface
-    /// waits on that slower worker, which is the priority inversion the runtime complains
-    /// of. Both touches of the storage therefore happen away from the main actor instead.
-    @concurrent
+    /// own, running at the default quality of service; whoever asks waits on that worker.
+    /// `start()` is called from a view's `task`, which asks at user-initiated -- higher than
+    /// the worker it waits on, and that is the priority inversion the runtime complains of.
+    /// Moving the work off the main actor does not settle it: the quality of service is the
+    /// asking task's rather than the thread's it happens to land on, and a task handed a
+    /// lower one of its own is raised back up the moment something awaits it.
+    ///
+    /// So both touches of the storage go through a queue of this class's own, kept below the
+    /// worker they wait on, and the caller suspends on the continuation instead of holding a
+    /// thread. Nothing higher is left waiting on anything lower either way round.
+    private nonisolated static let storage = DispatchQueue(
+        label: "cafe.oeee.cookie-storage",
+        qos: .utility
+    )
+
     private nonisolated static func nativeCookies(host: String) async -> [HTTPCookie] {
-        (HTTPCookieStorage.shared.cookies ?? []).filter { matches(host: host, $0) }
+        await withCheckedContinuation { continuation in
+            storage.async {
+                let cookies = HTTPCookieStorage.shared.cookies ?? []
+                continuation.resume(returning: cookies.filter { matches(host: host, $0) })
+            }
+        }
     }
 
-    @concurrent
     private nonisolated static func forget(_ cookies: [HTTPCookie]) async {
-        cookies.forEach(HTTPCookieStorage.shared.deleteCookie)
+        await withCheckedContinuation { continuation in
+            storage.async {
+                cookies.forEach(HTTPCookieStorage.shared.deleteCookie)
+                continuation.resume()
+            }
+        }
     }
 
     /// The `Cookie` header the web views would send to `url`.
