@@ -330,6 +330,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = cafe.oeee;
 				PRODUCT_MODULE_NAME = OeeeCafe;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				"PRODUCT_NAME[sdk=iphoneos*]" = "Oeee Cafe";
+				"PRODUCT_NAME[sdk=iphonesimulator*]" = "Oeee Cafe";
 				"PRODUCT_NAME[sdk=macosx*]" = "Oeee Cafe";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
@@ -404,6 +406,8 @@
 				PRODUCT_BUNDLE_IDENTIFIER = cafe.oeee;
 				PRODUCT_MODULE_NAME = OeeeCafe;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				"PRODUCT_NAME[sdk=iphoneos*]" = "Oeee Cafe";
+				"PRODUCT_NAME[sdk=iphonesimulator*]" = "Oeee Cafe";
 				"PRODUCT_NAME[sdk=macosx*]" = "Oeee Cafe";
 				REGISTER_APP_GROUPS = YES;
 				RUNTIME_EXCEPTION_ALLOW_DYLD_ENVIRONMENT_VARIABLES = NO;
