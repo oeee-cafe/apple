@@ -1,10 +1,3 @@
-/* Tab Bar */
-"tab.home" = "主页";
-"tab.search" = "搜索";
-"tab.communities" = "社区";
-"tab.notifications" = "通知";
-"tab.login" = "登录";
-
 // Mac app: menu bar
 "menu.about" = "关于黄瓜咖啡馆";
 "menu.settings" = "设置…";

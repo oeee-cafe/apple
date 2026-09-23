@@ -63,8 +63,8 @@ enum SupporterPack {
     ///
     /// Done as the page asks for prices, which is the page someone opens when
     /// the pack they paid for is not there -- rather than from a listener
-    /// living for as long as the app, which each tab would keep one of and each
-    /// would hand the same purchase over again.
+    /// living for as long as the app, which each web view would keep one of and
+    /// each would hand the same purchase over again.
     private static func handUnfinished(in webView: WKWebView) async {
         var unfinished: [VerificationResult<StoreKit.Transaction>] = []
         for await transaction in StoreKit.Transaction.unfinished {

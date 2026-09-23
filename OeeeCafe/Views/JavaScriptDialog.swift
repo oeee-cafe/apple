@@ -121,7 +121,7 @@ enum JavaScriptDialog {
     }
     #else
     /// Over whatever is in front in the web view's window, or when the web view is not in
-    /// one -- a tab not on screen yet -- in the app's window in front. Nil when the app has
+    /// one yet, in the app's window in front. Nil when the app has
     /// no window to show it in.
     static func show(_ dialog: Dialog, in webView: WKWebView) async -> Answer? {
         guard let presenter = presenter(for: webView) else {

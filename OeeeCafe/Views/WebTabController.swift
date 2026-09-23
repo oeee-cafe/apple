@@ -12,10 +12,6 @@ import UIKit
 /// WebTabController+UI.swift is WebKit asking for windows, dialogs and menus; Pencil.swift
 /// is Apple Pencil in the painter.
 final class WebTabController: NSObject, ObservableObject {
-    /// The tab last picked in the tab bar, which it draws as the one the reader is in
-    /// (ContentView). Only a tap moves it: a page reached some other way -- the site's own
-    /// toolbar, a link, Back, a notification -- is read under whichever tab was picked last.
-    @Published private(set) var section = WebTab.home
     let webView: WKWebView
     /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
     /// not left without asking.
@@ -96,8 +92,8 @@ final class WebTabController: NSObject, ObservableObject {
         // gesture, not an application's.
         webView.allowsLinkPreview = false
         #else
-        // Until the first page paints, and wherever a page does not reach -- under the tab
-        // bar at its foot, past its ends when pulled -- the ground and its grid show through
+        // Until the first page paints, and wherever a page does not reach -- above the home
+        // indicator at its foot, past its ends when pulled -- the ground and its grid show through
         // (PageGrid) rather than a white web view.
         webView.isOpaque = false
         webView.backgroundColor = .clear
@@ -161,57 +157,21 @@ final class WebTabController: NSObject, ObservableObject {
     /// was signed in natively has been picked up before anything is fetched (WebSession).
     func start() {
         guard webView.url == nil else { return }
-        load(WebTab.home.rootURL)
+        load(Self.home)
     }
+
+    /// The site's front page, where the app opens.
+    private static var home: URL { URL(string: APIConfig.shared.baseURL + "/")! }
 
     func load(_ url: URL) {
         requestedURL = url
         webView.load(URLRequest(url: url))
     }
 
-    /// A section picked in the tab bar: its own page, unless that is the page showing --
-    /// searched-for results are the search tab's page as much as the empty field is.
-    func show(_ section: WebTab) {
-        guard webView.url?.path != section.path else { return }
-        // The bar follows the tap at once rather than waiting out a fetch.
-        self.section = section
-        load(section.rootURL)
-    }
-
     /// Tries the page that could not be reached again.
     func retry() {
         isUnreachable = false
-        load(requestedURL ?? webView.url ?? WebTab.home.rootURL)
-    }
-
-    /// Shows the site's results for `query` (`/search?q=`).
-    func search(_ query: String) {
-        var components = URLComponents(url: WebTab.search.rootURL, resolvingAgainstBaseURL: false)
-        components?.queryItems = [URLQueryItem(name: "q", value: query)]
-        if let url = components?.url {
-            load(url)
-        }
-    }
-
-    /// Tapping the selected tab again: scroll to the top, or go back to the section's own
-    /// page from wherever in it the reader has got to.
-    func reselect() {
-        #if os(macOS)
-        Task {
-            let scrolled = try? await webView.evaluateJavaScript(Scripts.scrollToTop) as? Bool
-            if scrolled != true && webView.url?.path != section.path {
-                load(section.rootURL)
-            }
-        }
-        #else
-        let scrollView = webView.scrollView
-        let top = -scrollView.adjustedContentInset.top
-        if scrollView.contentOffset.y > top + 1 {
-            scrollView.setContentOffset(CGPoint(x: 0, y: top), animated: true)
-        } else if webView.url?.path != section.path {
-            load(section.rootURL)
-        }
-        #endif
+        load(requestedURL ?? webView.url ?? Self.home)
     }
 
     /// After signing in or out, the page showing was rendered for whoever was signed in
@@ -400,7 +360,7 @@ final class WebTabController: NSObject, ObservableObject {
         // keeps the strip above the home indicator to itself: a page that ends at the
         // screen's bottom edge is read past it, and a list's last row is not under the bar
         // the finger swipes up from. The painter is not read but filled, and it is given
-        // the whole screen already -- no tab bar, no status bar (WebTabContent) -- so that
+        // the whole screen already -- no status bar (WebTabContent) -- so that
         // strip is the one place left where the screen is not the painter's. Nothing paints
         // it: the web view draws no ground of its own, so what was there stays there, which
         // is the page the painter was opened from.

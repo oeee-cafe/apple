@@ -1,10 +1,3 @@
-/* Tab Bar */
-"tab.home" = "홈";
-"tab.search" = "검색";
-"tab.communities" = "커뮤니티";
-"tab.notifications" = "알림";
-"tab.login" = "로그인";
-
 // Mac app: menu bar
 "menu.about" = "오이카페에 관하여";
 "menu.settings" = "설정…";

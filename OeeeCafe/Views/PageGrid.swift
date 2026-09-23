@@ -7,7 +7,7 @@ import Combine
 ///
 /// The site draws the grid on the document (`html`, style.css in oeee-cafe/web), and a
 /// document ends: past the last of a page scrolled to its foot is the strip the scroll view
-/// keeps clear of the tab bar and the home indicator, and a page pulled past either end
+/// keeps clear of the home indicator, and a page pulled past either end
 /// shows what is behind it too. Plain ground there read as the pattern stopping short. So
 /// the grid goes on under the page, and it is put in the scroll view with the page rather
 /// than behind the web view: it moves as the page moves, with no catching up, and it is

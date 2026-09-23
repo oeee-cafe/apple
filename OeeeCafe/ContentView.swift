@@ -12,49 +12,16 @@ import Combine
 
 struct ContentView: View {
     @EnvironmentObject var authService: AuthService
-    /// The app's one web view. The tab bar picks the section it shows, and nothing else
-    /// moves the bar (WebTabController).
+    /// The app's one web view. The site's own toolbar is the only way around it, as it is in
+    /// the Mac app.
     @StateObject private var web = WebTabController()
-    @StateObject private var unread = UnreadCount.shared
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
     @State private var isReady = false
-
-    private var visibleTabs: [WebTab] {
-        WebTab.visible(isAuthenticated: authService.isAuthenticated)
-    }
-
-    /// The tab the reader is in: the one last picked, or home when that tab is no longer
-    /// theirs -- the sign-in tab, once they are signed in. Picking the tab they are in takes them back to its top.
-    private var selection: Binding<WebTab> {
-        Binding(
-            get: { visibleTabs.contains(web.section) ? web.section : .home },
-            set: { tab in
-                if tab == web.section {
-                    web.reselect()
-                } else {
-                    web.show(tab)
-                }
-            }
-        )
-    }
 
     var body: some View {
         Group {
             if isReady {
-                // Declared one by one rather than with ForEach: when the tabs change on
-                // signing in, a ForEach-built search tab loses its search role.
-                TabView(selection: selection) {
-                    webTab(.home)
-                    webTab(.communities)
-                    if authService.isAuthenticated {
-                        webTab(.notifications)
-                    } else {
-                        webTab(.login)
-                    }
-                    Tab(WebTab.search.title, systemImage: WebTab.search.systemImage, value: WebTab.search, role: .search) {
-                        SearchTabView(controller: web, isSelected: web.section == .search)
-                    }
-                }
+                WebTabContent(controller: web)
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -86,21 +53,11 @@ struct ContentView: View {
         .background(SiteThemeApplier())
     }
 
-    private func webTab(_ tab: WebTab) -> some TabContent<WebTab> {
-        Tab(tab.title, systemImage: tab.systemImage, value: tab) {
-            WebTabContent(controller: web)
-        }
-        .badge(tab == .notifications ? unread.count : 0)
-    }
-
     private func authenticationChanged(_ isAuthenticated: Bool) async {
-        if isAuthenticated {
-            // Asks for this device's push token (and for permission, the first time),
-            // which the pages then register for whoever is signed in.
-            await PushNotificationService.shared.requestPermissionsAndRegister()
-        } else {
-            unread.clear()
-        }
+        guard isAuthenticated else { return }
+        // Asks for this device's push token (and for permission, the first time),
+        // which the pages then register for whoever is signed in.
+        await PushNotificationService.shared.requestPermissionsAndRegister()
     }
 
     private func openPendingNavigation() {
@@ -127,8 +84,8 @@ private struct SiteThemeApplier: UIViewRepresentable {
     }
 }
 
-/// A tab's page. The painter has the whole screen, as a drawing app has: no tab bar or
-/// status bar, and a swipe in from an edge draws before it goes home.
+/// The page. The painter has the whole screen, as a drawing app has: no status bar, and a
+/// swipe in from an edge draws before it goes home.
 struct WebTabContent: View {
     @ObservedObject var controller: WebTabController
 
@@ -137,7 +94,6 @@ struct WebTabContent: View {
         WebTabView(controller: controller)
             .ignoresSafeArea(.container)
             .unreachable(controller)
-            .toolbar(painting ? .hidden : .automatic, for: .tabBar)
             .statusBarHidden(painting)
             .persistentSystemOverlays(painting ? .hidden : .automatic)
             .defersSystemGestures(on: painting ? .all : [])

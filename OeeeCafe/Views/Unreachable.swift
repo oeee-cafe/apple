@@ -28,7 +28,7 @@ final class Connectivity {
     }
 }
 
-/// A tab, or the Mac's window, whose first page could not be reached: said in words, with a
+/// The page, on an iPhone or in the Mac's window, whose first page could not be reached: said in words, with a
 /// way to try again, rather than the web view's own error page or nothing at all.
 struct UnreachableView: View {
     let retry: () -> Void

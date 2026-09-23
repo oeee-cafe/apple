@@ -19,8 +19,7 @@ class NavigationCoordinator: ObservableObject {
         }
     }
 
-    /// A page of the site, by its path (with any query). The web view shows it, and the
-    /// tab bar draws whichever section it turns out to be in (WebTabController.section).
+    /// A page of the site, by its path (with any query), which the web view shows.
     func open(path: String) {
         Logger.debug("NavigationCoordinator: Opening \(path)", category: Logger.app)
         pendingNavigation = PendingNavigation(path: path)
@@ -42,7 +41,7 @@ class NavigationCoordinator: ObservableObject {
     func handleNotificationTap(userInfo: [AnyHashable: Any]) {
         guard let path = userInfo["url"] as? String, path.hasPrefix("/"), !path.hasPrefix("//") else {
             Logger.warning("NavigationCoordinator: A notification without a page to open", category: Logger.app)
-            open(path: WebTab.notifications.path)
+            open(path: "/notifications")
             return
         }
         open(path: path)

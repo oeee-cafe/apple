@@ -21,8 +21,6 @@ enum Scripts {
     #endif
 
     #if os(macOS)
-    /// ScrollToTop.js: scrolls whichever of the page and `main` is scrolled back up.
-    static let scrollToTop = bundled("ScrollToTop")
     /// MacWindow.js: the window's chrome, on every page from its start.
     static let macWindow = bundled("MacWindow")
     /// QuietContextMenu.js: keeps WebKit's browser menu to where it is useful.

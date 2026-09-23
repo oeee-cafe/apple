@@ -7,49 +7,7 @@ import AppKit
 import UIKit
 #endif
 
-/// The search tab: the native search field, with the site's search page under it.
-///
-/// The field is the search role tab's own (ContentView), and iOS puts it where that
-/// release keeps search: in place of the tab bar on iOS 26, in the navigation bar on
-/// iOS 27. So the bar stays, empty as it looks on the tab that hides it; hidden, iOS 27
-/// has nowhere to show the field, and the tab opens with nothing to type in. Stepping
-/// into the tab hands the field the keyboard, rather than waiting to be tapped as well.
-///
-/// What the page under it shows before anything is searched for is the site's own search
-/// page, which leaves its form out where a field like this one is above it (search.jinja
-/// in oeee-cafe/web).
-struct SearchTabView: View {
-    @ObservedObject var controller: WebTabController
-    /// Whether this is the tab showing, which is when the field takes the keyboard.
-    let isSelected: Bool
-    @State private var query = ""
-    @FocusState private var isSearching: Bool
-
-    var body: some View {
-        NavigationStack {
-            WebTabView(controller: controller)
-                .ignoresSafeArea(.container)
-                .unreachable(controller)
-        }
-        .searchable(text: $query)
-        .searchFocused($isSearching)
-        .onChange(of: isSelected, initial: true) { _, selected in
-            guard selected else { return }
-            // Asked for as the tab is being built, the focus has no field to land on yet:
-            // the next turn of the run loop does.
-            Task { @MainActor in
-                isSearching = true
-            }
-        }
-        .onSubmit(of: .search) {
-            let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmed.isEmpty else { return }
-            controller.search(trimmed)
-        }
-    }
-}
-
-/// Shows a tab's web view. The web view outlives this view, so it is hosted in a container
+/// Shows the web view. The web view outlives this view, so it is hosted in a container
 /// rather than handed to SwiftUI directly.
 #if os(macOS)
 struct WebTabView: NSViewRepresentable {
@@ -81,11 +39,8 @@ struct WebTabView: UIViewRepresentable {
         container.takeWebView()
     }
 
-    /// Every tab shows the same web view, and a view can only be in one place: the
-    /// container the reader is looking at takes it, and takes it when it is put on screen
-    /// rather than when SwiftUI happens to ask. A tab left behind is asked too -- it is
-    /// still built, off screen -- and taking it back there is what left the tab stepped
-    /// into with nothing in it.
+    /// The web view outlives any one container, and a view can only be in one place: the
+    /// container takes it when it is put on screen rather than when SwiftUI happens to ask.
     final class Container: UIView {
         private let controller: WebTabController
         private var ground: AnyCancellable?

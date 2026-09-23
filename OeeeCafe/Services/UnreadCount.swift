@@ -5,8 +5,7 @@ import AppKit
 #endif
 
 /// The number on the site's bell: unread notifications and invitations waiting, together,
-/// as the page says it (`unread`, SiteBridge). The iOS notifications tab wears it, and the
-/// Mac's Dock icon.
+/// as the page says it (`unread`, SiteBridge). The Mac's Dock icon wears it.
 ///
 /// The site says it whenever the bell changes, so it is not asked for: before the bridge,
 /// iOS asked the API after every page and the Mac read the bell's markup, which stopped

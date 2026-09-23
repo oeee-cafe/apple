@@ -10,7 +10,7 @@ typealias PlatformColor = UIColor
 #endif
 
 /// The site's light/dark choice, made the app's: a reader who picked the dark look in the
-/// site's toolbar while the system is light gets a light status bar and a dark tab bar,
+/// site's toolbar while the system is light gets a light status bar,
 /// alerts and menus to go with the page, rather than the system's. Remembered, so the app
 /// opens in it rather than turning over once the first page says so.
 ///
