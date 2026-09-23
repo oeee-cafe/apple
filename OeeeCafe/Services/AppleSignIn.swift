@@ -25,10 +25,6 @@ import AppKit
 /// origin; the app never holds the session itself.
 @MainActor
 enum AppleSignIn {
-    /// Said in the user agent, so the site shows its button (theme_head.jinja in
-    /// oeee-cafe/web). An app without this would follow the link to Apple's page.
-    static let userAgentToken = "SignInWithApple"
-
     /// Whether `url` is the site's link to sign in with Apple.
     static func isSignInLink(_ navigationAction: WKNavigationAction, site: URL) -> Bool {
         guard let url = navigationAction.request.url else { return false }

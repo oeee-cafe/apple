@@ -31,11 +31,6 @@ import AppKit
 /// app's own OAuth client as audience, which is what the site's `[google].app_ids` lists.
 @MainActor
 enum GoogleSignIn {
-    /// Said in the user agent, so the site shows its button (theme_head.jinja in
-    /// oeee-cafe/web). A build without a client id to sign in with does not say it, and
-    /// the site offers nothing that would only fail.
-    static let userAgentToken = "SignInWithGoogle"
-
     /// The iOS OAuth client id, from `GoogleClientID` in the app's Info.plist (Google Cloud
     /// console > APIs & Services > Credentials > iOS). Empty when the build has none.
     static let clientID: String = {

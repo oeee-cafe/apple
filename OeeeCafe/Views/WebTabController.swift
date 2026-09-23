@@ -59,28 +59,17 @@ final class WebTabController: NSObject, ObservableObject {
         #endif
         #if os(macOS)
         // The site knows the Mac app by this (`data-mac-app`, theme_head.jinja in
-        // oeee-cafe/web) -- and that it signs in with Apple itself, and, where the
-        // build has a client id to sign in with, with Google. An app that says
-        // neither is shown neither button: following those links from here opens
-        // them outside the app, away from the session the answer belongs to.
-        var userAgent = "OeeeCafeMac \(AppleSignIn.userAgentToken)"
-        if GoogleSignIn.isAvailable {
-            userAgent += " \(GoogleSignIn.userAgentToken)"
-        }
-        configuration.applicationNameForUserAgent = userAgent
+        // oeee-cafe/web), and that it signs in with Apple and with Google itself
+        // rather than by following those links, which would open them outside the
+        // app and away from the session the answer belongs to.
+        configuration.applicationNameForUserAgent = "OeeeCafeMac"
         userScripts = SiteChrome.userScripts
         SiteChrome.install(in: configuration.userContentController)
         #else
         // The site knows the app by this, and leaves search and scrolling to iOS
         // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web) -- and signing in with
         // Apple and with Google, which the app does itself (AppleSignIn, GoogleSignIn).
-        // A build with no Google client id to sign in with leaves that one out, and the
-        // site shows no button for it.
-        var userAgent = "OeeeCafeiOS \(AppleSignIn.userAgentToken)"
-        if GoogleSignIn.isAvailable {
-            userAgent += " \(GoogleSignIn.userAgentToken)"
-        }
-        configuration.applicationNameForUserAgent = userAgent
+        configuration.applicationNameForUserAgent = "OeeeCafeiOS"
         userScripts = []
         #endif
 
