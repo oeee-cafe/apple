@@ -232,6 +232,19 @@ private struct SiteWindowSetup: NSViewRepresentable {
                     }
                 }
             }
+            // Full screen moves the title bar into a strip of its own that comes down
+            // with the menu bar, and AppKit lays it out there from the frames it finds:
+            // left where they are, measured from the top of a whole window, the buttons
+            // land outside the strip and are never seen. So they go back first.
+            observations.append(
+                NotificationCenter.default.addObserver(
+                    forName: NSWindow.willEnterFullScreenNotification, object: window, queue: .main
+                ) { [weak window] _ in
+                    MainActor.assumeIsolated {
+                        if let window { SiteChrome.restoreTrafficLights(in: window) }
+                    }
+                }
+            )
             SiteChrome.placeTrafficLights(in: window)
         }
     }
@@ -245,20 +258,46 @@ enum SiteChrome {
     private static let trafficLightsX: CGFloat = 20
     private static let trafficLightsY: CGFloat = 28.5
 
-    static func placeTrafficLights(in window: NSWindow) {
-        guard !window.styleMask.contains(.fullScreen),
-              let close = window.standardWindowButton(.closeButton),
+    /// Where AppKit laid the title bar and the buttons before they were moved, to give
+    /// back for full screen: the title bar's height, and each button's left edge.
+    private static var standard: (height: CGFloat, xs: [CGFloat])?
+
+    private static func buttons(of window: NSWindow) -> (container: NSView, buttons: [NSButton])? {
+        guard let close = window.standardWindowButton(.closeButton),
               let miniaturize = window.standardWindowButton(.miniaturizeButton),
               let zoom = window.standardWindowButton(.zoomButton),
-              let container = close.superview?.superview else { return }
+              let container = close.superview?.superview else { return nil }
+        return (container, [close, miniaturize, zoom])
+    }
+
+    static func placeTrafficLights(in window: NSWindow) {
+        guard !window.styleMask.contains(.fullScreen),
+              let (container, buttons) = buttons(of: window) else { return }
+        let (close, miniaturize) = (buttons[0], buttons[1])
+        if standard == nil {
+            standard = (container.frame.height, buttons.map(\.frame.minX))
+        }
         let height = close.frame.height + trafficLightsY
         var frame = container.frame
         frame.size.height = height
         frame.origin.y = window.frame.height - height
         container.frame = frame
         let spacing = miniaturize.frame.minX - close.frame.minX
-        for (index, button) in [close, miniaturize, zoom].enumerated() {
+        for (index, button) in buttons.enumerated() {
             button.setFrameOrigin(NSPoint(x: trafficLightsX + CGFloat(index) * spacing, y: button.frame.minY))
+        }
+    }
+
+    /// The title bar and its buttons as AppKit had them, for full screen to lay out;
+    /// leaving full screen places them again (placeTrafficLights).
+    static func restoreTrafficLights(in window: NSWindow) {
+        guard let standard, let (container, buttons) = buttons(of: window) else { return }
+        var frame = container.frame
+        frame.size.height = standard.height
+        frame.origin.y = window.frame.height - standard.height
+        container.frame = frame
+        for (button, x) in zip(buttons, standard.xs) {
+            button.setFrameOrigin(NSPoint(x: x, y: button.frame.minY))
         }
     }
 
