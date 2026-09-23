@@ -59,10 +59,11 @@ final class WebTabController: NSObject, ObservableObject {
         #endif
         #if os(macOS)
         // The site knows the Mac app by this (`data-mac-app`, theme_head.jinja in
-        // oeee-cafe/web) -- and, where the build has a client id to sign in with,
-        // that it does Google itself rather than in the web view, which Google
-        // refuses. A build without one says nothing and is shown no button.
-        var userAgent = "OeeeCafeMac"
+        // oeee-cafe/web) -- and that it signs in with Apple itself, and, where the
+        // build has a client id to sign in with, with Google. An app that says
+        // neither is shown neither button: following those links from here opens
+        // them outside the app, away from the session the answer belongs to.
+        var userAgent = "OeeeCafeMac \(AppleSignIn.userAgentToken)"
         if GoogleSignIn.isAvailable {
             userAgent += " \(GoogleSignIn.userAgentToken)"
         }

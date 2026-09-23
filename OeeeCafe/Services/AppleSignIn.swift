@@ -1,13 +1,18 @@
-#if os(iOS)
 import AuthenticationServices
-import UIKit
 import WebKit
+#if os(iOS)
+import UIKit
+#else
+import AppKit
+#endif
 
-/// Sign in with Apple, natively, for the site in a web view.
+/// Sign in with Apple, natively, for the site in a web view, on iOS and on the Mac alike.
 ///
 /// The site's "Sign in with Apple" is a link to `/auth/apple`, which in a browser goes to
-/// Apple's page and back. Here that would open Apple's page in Safari, away from the web
-/// view's session, so the tab stops the link (WebTab.swift) and signs in here instead:
+/// Apple's page and back. Here that would open Apple's page in Safari -- the navigation
+/// delegate sends anything that is not this site out of the app, on both platforms -- and
+/// the answer would come back to Safari's cookies rather than the web view's. So the tab
+/// stops the link (WebTabController+Navigation.swift) and signs in here instead:
 ///
 /// 1. the page asks the site for a state and a nonce (`POST /auth/apple/start`), which the
 ///    site keeps in the web view's session;
@@ -166,11 +171,12 @@ enum AppleSignIn {
 
     /// One ASAuthorizationController run, as an async call. Holds itself until Apple answers.
     private final class Authorization: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
-        private let anchor: UIWindow?
+        /// `UIWindow` on iOS, `NSWindow` on the Mac; `webView.window` is each.
+        private let anchor: ASPresentationAnchor?
         private var controller: ASAuthorizationController?
         private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
 
-        init(anchor: UIWindow?) {
+        init(anchor: ASPresentationAnchor?) {
             self.anchor = anchor
         }
 
@@ -204,4 +210,3 @@ enum AppleSignIn {
         }
     }
 }
-#endif

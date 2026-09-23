@@ -66,15 +66,13 @@ extension WebTabController: WKNavigationDelegate {
             openOutside(url)
             return .cancel
         }
-        #if os(iOS)
-        // Apple's sign-in page would open in Safari, away from this web view's session;
-        // the app signs in with Apple's own sheet instead. Not on the Mac, where the
-        // page opens in this web view and comes back to the same cookie jar.
+        // Apple's sign-in page would open in Safari, away from this web view's session
+        // -- anything that is not this site is opened outside the app, just above --
+        // so the app signs in with Apple's own sheet instead, on either platform.
         if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
             Task { await AppleSignIn.signIn(in: webView, next: Self.next(from: url)) }
             return .cancel
         }
-        #endif
         // Google's, which Google refuses in a web view at all, on either platform: it
         // signs in in a browser of the system's instead (GoogleSignIn).
         if isMainFrame && GoogleSignIn.isSignInLink(navigationAction, site: tab.rootURL) {
