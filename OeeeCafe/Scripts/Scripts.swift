@@ -97,7 +97,7 @@ enum Scripts {
 /// The site's commands the Mac's menu bar asks for (toolbar.jinja in oeee-cafe/web), by the
 /// names `oeeeApp.command` takes, which the contract lists (appContract.json's `commands`).
 enum SiteCommand: String, CaseIterable {
-    case recent, following, communities, together, hashtags, search, notifications, drafts
+    case recent, following, communities, together, tags, search, notifications, drafts
     case profile, account, about, shortcuts
     case newDrawing = "new-drawing"
     case themeLight = "theme-light"

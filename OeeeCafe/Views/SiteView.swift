@@ -390,7 +390,7 @@ struct SiteCommands: Commands {
                 .keyboardShortcut("3")
             Button("menu.together".localized) { site.command(.together) }
                 .keyboardShortcut("4")
-            Button("menu.hashtags".localized) { site.command(.hashtags) }
+            Button("menu.tags".localized) { site.command(.tags) }
                 .keyboardShortcut("5")
             Divider()
             Button("menu.notifications".localized) { site.command(.notifications) }
