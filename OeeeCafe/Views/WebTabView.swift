@@ -19,8 +19,10 @@ struct SearchTabView: View {
                     .ignoresSafeArea(.container)
                     .unreachable(controller)
                 if !hasSearched {
+                    // Nothing searched for yet: the site's own ground, not the system's,
+                    // over the whole of the tab -- the strip behind the clock with it.
                     ContentUnavailableView("tab.search".localized, systemImage: "magnifyingglass")
-                        .background(.background)
+                        .background(Color("Ground").ignoresSafeArea())
                 }
             }
             #if os(iOS)
