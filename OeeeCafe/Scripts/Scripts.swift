@@ -11,25 +11,23 @@ enum Scripts {
     /// browser asks them (`oeeeApp.wouldLoseWork`, app_bridge.jinja in oeee-cafe/web):
     /// WKWebView asks none of them, so a drawing would go without a word. Evaluated in the
     /// page's world, where the site's globals are; the answer is the expression's value.
-    /// A page that is not the site's has nothing to lose.
-    static let wouldLoseWork = "window.oeeeApp ? window.oeeeApp.wouldLoseWork() : false"
+    /// A page that is not the site's has nothing to lose. Word for word the contract's
+    /// `scripts.wouldLoseWork` (appContract.json in oeee-cafe/web), which every app asks
+    /// the same way.
+    static let wouldLoseWork =
+        "window.oeeeApp && window.oeeeApp.wouldLoseWork ? window.oeeeApp.wouldLoseWork() : false"
 
-    /// The site's loading bar (loading_bar.jinja in oeee-cafe/web), for a page the reader
-    /// has just agreed to leave. The page puts it up at the press for any other load, but
-    /// not for one it asks about: only the app hears the answer, and a bar put up before a
-    /// Stay would hang there. WebKit stops painting the page once the load begins, so the
-    /// bar is shown and a frame let pass first, as the page's own `oeeeLoadingBar.leave`
-    /// does -- and not waited on for longer than a moment, since a web view that is not on
-    /// the screen has no frames to wait for. Run with `callAsyncJavaScript`, for the await.
-    static let showLeaving = """
-        if (window.oeeeLoadingBar) {
-          window.oeeeLoadingBar.start(null, true);
-          await new Promise(function (resolve) {
-            requestAnimationFrame(function () { resolve(); });
-            setTimeout(resolve, 100);
-          });
-        }
-        """
+    /// For a page the reader has just agreed to leave: the page puts its loading bar up
+    /// (`oeeeApp.leaving`), which it does not do at the press for a load it asks about --
+    /// only the app hears the answer, and a bar put up before a Stay would hang there. The
+    /// promise it returns settles once the bar has had a frame to be painted in, or soon
+    /// after when there is no frame to wait for, and the load begins then: WebKit stops
+    /// painting the page once it does. The expression is the contract's `scripts.leaving`,
+    /// word for word (`leavingExpression`); the whole is run with `callAsyncJavaScript`,
+    /// for the await.
+    static let leaving = "await (\(leavingExpression));"
+    static let leavingExpression =
+        "window.oeeeApp && window.oeeeApp.leaving ? window.oeeeApp.leaving() : null"
 
     /// Fingers pan and pinch in the painter; the pen draws (frontend/shared/appBridge.ts).
     static let preferPen = "window.oeeeApp && window.oeeeApp.painter && window.oeeeApp.painter.preferPen();"

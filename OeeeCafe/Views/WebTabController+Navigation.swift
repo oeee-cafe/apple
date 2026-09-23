@@ -66,7 +66,7 @@ extension WebTabController: WKNavigationDelegate {
                 return .cancel
             case .leave:
                 // The page could not put its bar up at the press, not knowing the answer.
-                await showLeaving()
+                await leaving()
             case .unasked:
                 break
             }

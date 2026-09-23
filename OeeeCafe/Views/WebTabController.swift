@@ -5,6 +5,35 @@ import WebKit
 import UIKit
 #endif
 
+/// What the web view's user agent ends with, which is how the site knows the app: `OeeeCafe
+/// platform/<app>`, and `store/<store>` straight after it for a build that sells. The site
+/// reads it in one place (theme_head.jinja in oeee-cafe/web) and marks its root before the
+/// page paints -- `data-app`, `data-form` and `data-store` -- and what those marks change is
+/// the site's; the app says what it is and nothing more.
+enum UserAgent {
+    /// The iPhone and iPad app: `data-app="ios"` and `data-form="handheld"`, the page
+    /// scrolling whole under the system's gestures. It measures the reader's text size
+    /// itself, from WebKit's system font.
+    static let ios = "OeeeCafe platform/ios store/apple"
+    /// The Mac app: `data-app="macos"` and `data-form="desktop"`, its toolbar the title bar
+    /// with room kept for the traffic lights (ds.css).
+    static let macos = "OeeeCafe platform/macos store/apple"
+
+    // Both say `store/apple`: each build sells the Supporter Pack through the App Store --
+    // the Mac app is sandboxed and sold through the Mac App Store under the same bundle id,
+    // with the same pack in it -- so the page marks `data-store="apple"` and draws the
+    // pack's buttons (app_store.jinja).
+
+    /// This build's.
+    static var mark: String {
+        #if os(macOS)
+        macos
+        #else
+        ios
+        #endif
+    }
+}
+
 /// The app's one web view, and what the app knows of the page in it.
 ///
 /// Split by what each part answers to: this file is the page's state and what the site says
@@ -62,23 +91,7 @@ final class WebTabController: NSObject, ObservableObject {
         #if os(iOS)
         configuration.allowsInlineMediaPlayback = true
         #endif
-        #if os(macOS)
-        // The site knows the Mac app by this, and marks its root `data-app="macos"`
-        // and `data-form="desktop"` before the page paints (theme_head.jinja in
-        // oeee-cafe/web): its toolbar is then the title bar, with room kept for the
-        // traffic lights (ds.css). `store/apple` says the build sells through the App
-        // Store -- the Mac app is sandboxed and sold through the Mac App Store under
-        // the same bundle id, with the same pack in it -- so the page marks
-        // `data-store="apple"` and draws the Supporter Pack's buttons (app_store.jinja).
-        configuration.applicationNameForUserAgent = "OeeeCafe/macos store/apple"
-        #else
-        // The site knows the app by this, and marks its root `data-app="ios"`,
-        // `data-form="handheld"` -- the page scrolls whole under the system's gestures --
-        // and, for `store/apple`, `data-store="apple"`, so the Supporter Pack's buttons
-        // are drawn (theme_head.jinja and app_store.jinja in oeee-cafe/web). It measures
-        // the reader's text size itself, from WebKit's system font.
-        configuration.applicationNameForUserAgent = "OeeeCafe/ios store/apple"
-        #endif
+        configuration.applicationNameForUserAgent = UserAgent.mark
 
         webView = WKWebView(frame: .zero, configuration: configuration)
         webView.allowsBackForwardNavigationGestures = true
@@ -355,10 +368,10 @@ final class WebTabController: NSObject, ObservableObject {
         return await JavaScriptDialog.confirmLeaving(in: webView) ? .leave : .stay
     }
 
-    /// The page's loading bar, for a page the reader has just agreed to leave
-    /// (`Scripts.showLeaving`).
-    func showLeaving() async {
-        _ = try? await webView.callAsyncJavaScript(Scripts.showLeaving, arguments: [:], in: nil, contentWorld: .page)
+    /// Tells the page the reader has just agreed to leave it, and waits for it to show that
+    /// a page is on its way (`Scripts.leaving`).
+    func leaving() async {
+        _ = try? await webView.callAsyncJavaScript(Scripts.leaving, arguments: [:], in: nil, contentWorld: .page)
     }
 
     // MARK: - Loading
