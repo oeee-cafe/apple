@@ -1,0 +1,87 @@
+{
+  "identifier" : "0F1B4C8A-6D2E-4F3A-9C41-3B7E5A0D2C18",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "11000",
+      "familyShareable" : false,
+      "internalID" : "20260001",
+      "localizations" : [
+        {
+          "description" : "Support Oeee Cafe through 2026. A mark beside your name for the year, and a line in the credits.",
+          "displayName" : "Supporter Pack 2026",
+          "locale" : "en_US"
+        },
+        {
+          "description" : "2026년 한 해 동안 오이카페를 후원합니다. 올해의 표식이 이름 옆에 붙고, 소개 페이지에 이름이 실립니다.",
+          "displayName" : "2026 후원 팩",
+          "locale" : "ko_KR"
+        }
+      ],
+      "productID" : "cafe.oeee.supporter.2026",
+      "referenceName" : "Supporter Pack 2026",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "ko_KR",
+    "_storefront" : "KOR",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
