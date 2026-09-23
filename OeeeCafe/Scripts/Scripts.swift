@@ -3,13 +3,17 @@ import WebKit
 
 /// What the app runs in the site's pages: the scripts it injects or evaluates, bundled as
 /// the .js files beside this one so they read as JavaScript, and the few one-line calls the
-/// app makes into the page (window.oeeeCommand, window.oeeePainter, --oeee-text-scale and
-/// window.oeeeRestoreContent, all in oeee-cafe/web).
+/// app makes into the page (window.oeeeApp, window.oeeeCommand, window.oeeePainter,
+/// --oeee-text-scale and window.oeeeRestoreContent, all in oeee-cafe/web).
 ///
 /// What the site tells the app is not here: it says that itself (SiteBridge).
 enum Scripts {
-    /// WouldLoseWork.js: whether the page's `beforeunload` handlers would stop a browser.
-    static let wouldLoseWork = bundled("WouldLoseWork")
+    /// Whether the page's `beforeunload` handlers would stop a browser, asked the way a
+    /// browser asks them (`oeeeApp.wouldLoseWork`, app_bridge.jinja in oeee-cafe/web):
+    /// WKWebView asks none of them, so a drawing would go without a word. Evaluated in the
+    /// page's world, where the site's globals are; the answer is the expression's value.
+    /// A page that is not the site's has nothing to lose.
+    static let wouldLoseWork = "window.oeeeApp ? window.oeeeApp.wouldLoseWork() : false"
 
     #if os(iOS)
     /// HoldScale.js: keeps the painter's page at its own scale.
@@ -39,7 +43,7 @@ enum Scripts {
     /// (toolbar.jinja in oeee-cafe/web), so the page that was left shows again.
     static let restoreContent = "window.oeeeRestoreContent && window.oeeeRestoreContent();"
 
-    /// Fingers pan and pinch in the painter; the pen draws (frontend/painter/iosApp.ts).
+    /// Fingers pan and pinch in the painter; the pen draws (frontend/shared/appBridge.ts).
     static let preferPen = "window.oeeePainter && window.oeeePainter.preferPen();"
 
     /// One of the painter's commands ("toggle-eraser", "previous-tool").

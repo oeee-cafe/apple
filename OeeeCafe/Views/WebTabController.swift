@@ -35,6 +35,10 @@ final class WebTabController: NSObject, ObservableObject {
     /// The page last asked for, to ask for again.
     var requestedURL: URL?
     private var connectivity: AnyCancellable?
+    #if os(macOS)
+    /// The site's ground, as the pages say it (SiteTheme).
+    private var ground: AnyCancellable?
+    #endif
     /// Asked once a leave is already being asked about, so a second does not stack on it.
     private var isAskingToLeave = false
 
@@ -69,17 +73,19 @@ final class WebTabController: NSObject, ObservableObject {
         configuration.allowsInlineMediaPlayback = true
         #endif
         #if os(macOS)
-        // The site knows the Mac app by this (`data-mac-app`, theme_head.jinja in
-        // oeee-cafe/web), and that it signs in with Apple and with Google itself
-        // rather than by following those links, which would open them outside the
-        // app and away from the session the answer belongs to.
+        // The site knows the Mac app by this, and marks its root `data-desktop="macos"`
+        // before the page paints (theme_head.jinja in oeee-cafe/web): its toolbar is
+        // then the title bar, with room kept for the traffic lights (ds.css). It also
+        // knows the app signs in with Apple and with Google itself rather than by
+        // following those links, which would open them outside the app and away from
+        // the session the answer belongs to (SignIn).
         configuration.applicationNameForUserAgent = "OeeeCafeMac"
         userScripts = SiteChrome.userScripts
         SiteChrome.install(in: configuration.userContentController)
         #else
         // The site knows the app by this, and leaves search and scrolling to iOS
         // (`data-app="ios"`, theme_head.jinja in oeee-cafe/web) -- and signing in with
-        // Apple and with Google, which the app does itself (AppleSignIn, GoogleSignIn).
+        // Apple and with Google, which the app does itself (SignIn).
         configuration.applicationNameForUserAgent = "OeeeCafeiOS"
         userScripts = []
         #endif
@@ -90,7 +96,6 @@ final class WebTabController: NSObject, ObservableObject {
         // A force click on a link opens WebKit's preview of the page, which is a browser's
         // gesture, not an application's.
         webView.allowsLinkPreview = false
-        webView.underPageBackgroundColor = SiteChrome.ground
         #else
         // Until the first page paints, and wherever a page does not reach -- under the tab
         // bar at its foot, past its ends when pulled -- the ground and its grid show through
@@ -131,6 +136,12 @@ final class WebTabController: NSObject, ObservableObject {
                 MainActor.assumeIsolated { self?.showTextScale() }
             },
         ]
+        #endif
+        #if os(macOS)
+        // Under a page pulled past its ends, so a load does not flash either.
+        ground = SiteTheme.shared.$colours.sink { [weak self] colours in
+            self?.webView.underPageBackgroundColor = SiteTheme.ground(colours)
+        }
         #endif
         showPageState()
         connectivity = Connectivity.shared.restored.sink { [weak self] in
@@ -211,6 +222,9 @@ final class WebTabController: NSObject, ObservableObject {
         webView.configuration.userContentController.removeAllScriptMessageHandlers()
         webView.stopLoading()
         connectivity = nil
+        #if os(macOS)
+        ground = nil
+        #endif
         missingPageShown?.cancel()
         #if os(iOS)
         observers.forEach(NotificationCenter.default.removeObserver)
@@ -237,12 +251,12 @@ final class WebTabController: NSObject, ObservableObject {
     #if os(iOS)
     /// The reader's text size (Dynamic Type), as a multiple of the system's default body
     /// size, for the site's type scale to follow (--oeee-text-scale, ds.css in
-    /// oeee-cafe/web). Kept within what its layouts were drawn for: the largest
-    /// accessibility sizes stop at twice the default.
+    /// oeee-cafe/web). Said as it is: the site keeps it within what its layouts were drawn
+    /// for, so the largest accessibility sizes stop at twice the default there.
     private static var textScale: Double {
         let traits = UITraitCollection(preferredContentSizeCategory: UIApplication.shared.preferredContentSizeCategory)
         let body = UIFontMetrics(forTextStyle: .body).scaledValue(for: 17, compatibleWith: traits)
-        return min(max(body / 17, 0.8), 2)
+        return body / 17
     }
 
     /// Puts the reader's new text size on the pages to come, and on the page showing now.
@@ -283,7 +297,10 @@ final class WebTabController: NSObject, ObservableObject {
         case .unread(let count):
             UnreadCount.shared.set(count)
         case .theme(let theme):
+            SiteTheme.shared.paint(ground: theme.ground, grid: theme.grid)
             SiteTheme.shared.choose(theme.choice, in: webView.window)
+        case .words(let words):
+            SiteWords.current = words
         case .haptic(let name):
             #if os(iOS)
             Haptics.play(name)
@@ -308,6 +325,8 @@ final class WebTabController: NSObject, ObservableObject {
             Task { await SupporterPack.buy(purchase.product, in: webView) }
         case .restore:
             Task { await SupporterPack.restore(in: webView) }
+        case .signIn(let provider, let nonce):
+            Task { await SignIn.sheet(provider, nonce: nonce, in: webView) }
         }
     }
 
@@ -375,7 +394,8 @@ final class WebTabController: NSObject, ObservableObject {
     /// saved and the reader chooses to stay.
     func mayLeave() async -> Bool {
         guard !isAskingToLeave else { return false }
-        guard (try? await webView.evaluateJavaScript(Scripts.wouldLoseWork)) as? Bool == true else {
+        let wouldLose = try? await webView.evaluateJavaScript(Scripts.wouldLoseWork, in: nil, contentWorld: .page)
+        guard wouldLose as? Bool == true else {
             return true
         }
         isAskingToLeave = true

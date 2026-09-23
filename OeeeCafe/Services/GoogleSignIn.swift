@@ -11,24 +11,19 @@ import AppKit
 ///
 /// The site's "Sign in with Google" is a link to `/auth/google`, which in a browser goes to
 /// Google's page and back. Google refuses its own sign-in pages inside an embedded web view
-/// (`disallowed_useragent`). So the tab stops the link (WebTabController+Navigation.swift)
-/// and signs in here, in `ASWebAuthenticationSession` -- a browser of the system's, which is
-/// what Google asks an app to use, and which the person's Safari sign-ins are already in.
+/// (`disallowed_useragent`). So the tab stops the link and the page carries the sign-in
+/// (SignIn.swift, app_sign_in.jinja in oeee-cafe/web); this is the part only the app can
+/// do: Google's page in `ASWebAuthenticationSession` -- a browser of the system's, which is
+/// what Google asks an app to use, and which the person's Safari sign-ins are already in --
+/// with the nonce the page was given, and the code it comes back with traded for an ID
+/// token. The trade stays here: this is a public client with PKCE, so there is no secret in
+/// the app, and nothing the site would need to hold.
 ///
 /// The Mac app is the same web view with the same bundle id, so it signs in against the same
 /// OAuth client and takes the same path; only the window the sheet hangs from differs.
 ///
-/// 1. the page asks the site for a state and a nonce (`POST /auth/google/start`), which the
-///    site keeps in the web view's session;
-/// 2. Google's page signs in with that nonce and comes back with a code, which this trades
-///    for an ID token -- a public client with PKCE, so there is no secret in the app;
-/// 3. the page posts the token and the state to `/auth/google`, and the site checks both
-///    against the session and signs in (src/google.rs and src/web/handlers/identity.rs in
-///    oeee-cafe/web).
-///
-/// Everything the site is asked is asked by the page, so it carries the page's cookie and
-/// origin; the app never holds the session itself. The token this ends up with names the
-/// app's own OAuth client as audience, which is what the site's `[google].app_ids` lists.
+/// The token this ends up with names the app's own OAuth client as audience, which is what
+/// the site's `[google].app_ids` lists.
 @MainActor
 enum GoogleSignIn {
     /// The iOS OAuth client id, from `GoogleClientID` in the app's Info.plist (Google Cloud
@@ -59,87 +54,41 @@ enum GoogleSignIn {
             && (navigationAction.request.httpMethod ?? "GET") == "GET"
     }
 
-    /// Signs in with Google for the page in `webView`, going on to `next` afterwards.
-    static func signIn(in webView: WKWebView, next: String?) async {
-        guard let started = await start(in: webView, next: next) else {
-            Logger.warning("GoogleSignIn: The site did not start a sign-in", category: Logger.auth)
-            await stay(in: webView)
-            return
-        }
-
+    /// Google's page, over the window of `webView`, for `nonce`, and what it came to.
+    static func signIn(nonce: String, in webView: WKWebView) async -> SignIn.Told {
         let verifier = codeVerifier()
         let code: String
         do {
             code = try await authorize(
                 in: webView,
-                state: started.state,
-                nonce: started.nonce,
+                nonce: nonce,
                 challenge: codeChallenge(for: verifier)
             )
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
-            // Put away without signing in: the page stays as it was.
-            await stay(in: webView)
-            return
+            return .cancelled
         } catch {
             Logger.warning("GoogleSignIn: Google did not sign in - \(error.localizedDescription)", category: Logger.auth)
-            // The site says it could not confirm who this is, in the page's own words.
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
-            return
+            return .failed
         }
 
         guard let token = await exchange(code: code, verifier: verifier) else {
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
-            return
+            return .failed
         }
-        await answer(in: webView, fields: ["state": started.state, "id_token": token])
-    }
-
-    /// Shows the page as it was before the link was tapped, as AppleSignIn does.
-    private static func stay(in webView: WKWebView) async {
-        _ = try? await webView.evaluateJavaScript("window.oeeeRestoreContent && window.oeeeRestoreContent();")
-    }
-
-    private struct Started {
-        let state: String
-        let nonce: String
-    }
-
-    /// Asks the site, from the page, for this sign-in's state and nonce.
-    private static func start(in webView: WKWebView, next: String?) async -> Started? {
-        let script = """
-        const body = new URLSearchParams();
-        if (next) body.set("next", next);
-        const response = await fetch("/auth/google/start", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
-        });
-        if (!response.ok) return null;
-        return await response.json();
-        """
-        let result = try? await webView.callAsyncJavaScript(
-            script,
-            arguments: ["next": next ?? NSNull()],
-            in: nil,
-            contentWorld: .defaultClient
-        )
-        guard let answer = result as? [String: Any],
-              let state = answer["state"] as? String,
-              let nonce = answer["nonce"] as? String
-        else { return nil }
-        return Started(state: state, nonce: nonce)
+        return .signedIn(idToken: token, user: nil)
     }
 
     /// Google's page, in a browser of the system's, and the code it comes back with.
-    /// `state` is the site's, echoed by Google and compared here, so a redirect that is
-    /// not this sign-in's answer is not taken for one.
+    ///
+    /// `state` is made up here for this one trip and compared when Google echoes it, so a
+    /// redirect that is not this sign-in's answer is not taken for one. It is the app's
+    /// own: the site's state stays in the page, which posts it with the token, and never
+    /// passes through the app.
     private static func authorize(
         in webView: WKWebView,
-        state: String,
         nonce: String,
         challenge: String
     ) async throws -> String {
+        let state = randomString()
         var components = URLComponents(string: authorizeURL)!
         components.queryItems = [
             URLQueryItem(name: "client_id", value: clientID),
@@ -199,40 +148,14 @@ enum GoogleSignIn {
         }
     }
 
-    /// Posts the answer to `/auth/google` from the page, which the site takes it from.
-    ///
-    /// The site says where it would have sent a browser rather than sending one, and the
-    /// page goes there itself, replacing where it is: signing in and linking are then the
-    /// same one step, and neither leaves the page it started from in the history.
-    private static func answer(in webView: WKWebView, fields: [String: String]) async {
-        let script = """
-        const body = new URLSearchParams(fields);
-        body.set("format", "json");
-        const response = await fetch("/auth/google", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
-        });
-        if (!response.ok) return;
-        const answer = await response.json();
-        // Replaced, not followed: the page signed in from is not left in the
-        // history behind the one it lands on, so Back does not return to a
-        // sign-in form for an account already signed in. The site's notice is
-        // waiting in the session and is shown by the page this replaces with.
-        location.replace(answer.next || "/");
-        """
-        _ = try? await webView.callAsyncJavaScript(
-            script,
-            arguments: ["fields": fields],
-            in: nil,
-            contentWorld: .defaultClient
-        )
-    }
-
     /// PKCE: a secret this sign-in makes up, sent to Google only as its SHA-256, so a code
     /// caught on the way back cannot be traded by anything that did not start the sign-in.
     private static func codeVerifier() -> String {
+        randomString()
+    }
+
+    /// 32 random bytes, base64url: a verifier, or a state.
+    private static func randomString() -> String {
         var bytes = [UInt8](repeating: 0, count: 32)
         _ = SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes)
         return base64URL(Data(bytes))

@@ -20,6 +20,8 @@ enum SiteMessage: Equatable {
     case prices(store: String, products: [String])
     case purchase(Purchase)
     case restore
+    case signIn(provider: String, nonce: String)
+    case words(Words)
 
     /// The version of the contract this build speaks. A message of another is a change
     /// this build does not understand, so it is left unheard rather than half-read.
@@ -40,6 +42,53 @@ enum SiteMessage: Equatable {
     struct Theme: Decodable, Equatable {
         /// "light", "dark" or "system".
         let choice: String
+        /// The design system's ground and the grid ruled on it (`--ds-ground`, `--ds-grid`,
+        /// ds.css in oeee-cafe/web), as CSS colours; nil on a page without the design
+        /// system's stylesheet. Optional too because a site from before them sends neither.
+        let ground: String?
+        let grid: String?
+    }
+
+    /// What the app says in dialogs and menus of its own over the page, in the page's
+    /// language (`words`, locales/*.ftl in oeee-cafe/web). Only what this app says is read;
+    /// a word the site does not send keeps its English default, which is also what is said
+    /// before any page has spoken.
+    struct Words: Decodable, Equatable {
+        var leaveTitle = "Leave this page?"
+        var leaveBody = "Anything you have not saved will be lost."
+        var leave = "Leave"
+        var stay = "Stay"
+        var ok = "OK"
+        var cancel = "Cancel"
+        var saveImage = "Save to Photos"
+        var copyImage = "Copy"
+        var share = "Share…"
+        var copyLink = "Copy Link"
+
+        init() {}
+
+        private enum Key: String, CodingKey {
+            case leaveTitle, leaveBody, leave, stay, ok, cancel, saveImage, copyImage, share, copyLink
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: Key.self)
+            func word(_ key: Key, _ fallback: String) -> String {
+                guard let value = try? container.decodeIfPresent(String.self, forKey: key),
+                      !value.isEmpty else { return fallback }
+                return value
+            }
+            leaveTitle = word(.leaveTitle, leaveTitle)
+            leaveBody = word(.leaveBody, leaveBody)
+            leave = word(.leave, leave)
+            stay = word(.stay, stay)
+            ok = word(.ok, ok)
+            cancel = word(.cancel, cancel)
+            saveImage = word(.saveImage, saveImage)
+            copyImage = word(.copyImage, copyImage)
+            share = word(.share, share)
+            copyLink = word(.copyLink, copyLink)
+        }
     }
 
     /// A Supporter Pack to sell: which store it belongs to ("apple" here,
@@ -75,7 +124,7 @@ enum SiteMessage: Equatable {
         let message: SiteMessage?
 
         private enum Key: String, CodingKey {
-            case v, type, count, name, drawing, state, store, products
+            case v, type, count, name, drawing, state, store, products, provider, nonce
         }
 
         init(from decoder: Decoder) throws {
@@ -106,11 +155,24 @@ enum SiteMessage: Equatable {
                 message = .purchase(try Purchase(from: decoder))
             case "restore":
                 message = .restore
+            case "signIn":
+                message = .signIn(
+                    provider: try container.decode(String.self, forKey: .provider),
+                    nonce: try container.decode(String.self, forKey: .nonce)
+                )
+            case "words":
+                message = .words(try Words(from: decoder))
             default:
                 message = nil
             }
         }
     }
+}
+
+/// The words the page on screen last sent (`words`), for the app's own dialogs and menus
+/// over it (JavaScriptDialog, DrawingMenu): English until a page has spoken.
+enum SiteWords {
+    static var current = SiteMessage.Words()
 }
 
 /// Hears `oeeeBridge` for one web view and hands what it reads to `onMessage`.

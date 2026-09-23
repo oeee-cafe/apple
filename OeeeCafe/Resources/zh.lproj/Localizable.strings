@@ -1,7 +1,3 @@
-/* Common */
-"common.cancel" = "取消";
-"common.ok" = "确定";
-
 /* Tab Bar */
 "tab.home" = "主页";
 "tab.search" = "搜索";
@@ -37,15 +33,3 @@
 "site.unreachable_title" = "无法连接黄瓜咖啡馆。";
 "site.unreachable_body" = "请检查网络连接后重试。";
 "site.retry" = "重试";
-
-// Leaving a page with unsaved work
-"leave.title" = "要离开此页面吗？";
-"leave.body" = "未保存的内容将会丢失。";
-"leave.leave" = "离开";
-"leave.stay" = "留下";
-
-// iOS app: a long press on a drawing
-"drawing.save" = "存储到“照片”";
-"drawing.copy" = "拷贝";
-"drawing.share" = "共享…";
-"drawing.copy_link" = "拷贝链接";

@@ -12,7 +12,8 @@ import UniformTypeIdentifiers
 /// WebKit names the link a long press was on but not the image, and while it is working
 /// out the press the page cannot be asked: the answer would come after the finger had
 /// lifted. So the site says which drawing a finger is on as it lands (`pressed`,
-/// SiteBridge), and the menu is built from that.
+/// SiteBridge), and the menu is built from that, in the words the page last said
+/// (SiteWords).
 enum DrawingMenu {
     /// A pressed drawing. The menu has to answer while the finger is still down, so it is
     /// built from what the page knows at once, and the file follows.
@@ -67,25 +68,26 @@ enum DrawingMenu {
     static func configuration(for drawing: Drawing, in webView: WKWebView) -> UIContextMenuConfiguration {
         drawing.load()
         let room = webView.window?.bounds.size ?? webView.bounds.size
+        let words = SiteWords.current
         return UIContextMenuConfiguration(identifier: nil) {
             Preview(drawing: drawing, room: CGSize(width: room.width - 32, height: room.height * 0.6))
         } actionProvider: { _ in
             var actions = [
-                UIAction(title: "drawing.save".localized, image: UIImage(systemName: "square.and.arrow.down")) { _ in
+                UIAction(title: words.saveImage, image: UIImage(systemName: "square.and.arrow.down")) { _ in
                     save(drawing)
                 },
-                UIAction(title: "drawing.copy".localized, image: UIImage(systemName: "doc.on.doc")) { _ in
+                UIAction(title: words.copyImage, image: UIImage(systemName: "doc.on.doc")) { _ in
                     Task {
                         guard let (data, type, _) = await drawing.file else { return }
                         UIPasteboard.general.setData(data, forPasteboardType: type.identifier)
                     }
                 },
-                UIAction(title: "drawing.share".localized, image: UIImage(systemName: "square.and.arrow.up")) { _ in
+                UIAction(title: words.share, image: UIImage(systemName: "square.and.arrow.up")) { _ in
                     share(drawing, from: webView)
                 },
             ]
             if let link = drawing.link {
-                actions.append(UIAction(title: "drawing.copy_link".localized, image: UIImage(systemName: "link")) { _ in
+                actions.append(UIAction(title: words.copyLink, image: UIImage(systemName: "link")) { _ in
                     UIPasteboard.general.url = link
                 })
             }

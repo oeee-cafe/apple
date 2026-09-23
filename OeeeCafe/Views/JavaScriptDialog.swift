@@ -9,6 +9,8 @@ import UIKit
 /// left, shown over the web view's window.
 ///
 /// Each is described once, the same on both platforms; only putting it on screen differs.
+/// What the app says in them itself is in the page's language, as the page last said it
+/// (SiteWords).
 enum JavaScriptDialog {
     static func alert(_ message: String, in webView: WKWebView) async {
         _ = await show(Dialog(message: message, actions: [.ok]), in: webView)
@@ -28,12 +30,13 @@ enum JavaScriptDialog {
     /// the default, so a reflexive Return keeps the drawing; and with nowhere to ask, the
     /// drawing stays too.
     static func confirmLeaving(in webView: WKWebView) async -> Bool {
+        let words = SiteWords.current
         let dialog = Dialog(
-            title: "leave.title".localized,
-            message: "leave.body".localized,
+            title: words.leaveTitle,
+            message: words.leaveBody,
             actions: [
-                Action(title: "leave.stay".localized, role: .cancel),
-                Action(title: "leave.leave".localized, role: .destructive),
+                Action(title: words.stay, role: .cancel),
+                Action(title: words.leave, role: .destructive),
             ],
             isWarning: true,
             prefersFirst: true
@@ -48,8 +51,8 @@ enum JavaScriptDialog {
         let title: String
         let role: Role
 
-        static var ok: Action { Action(title: "common.ok".localized, role: .normal) }
-        static var cancel: Action { Action(title: "common.cancel".localized, role: .cancel) }
+        static var ok: Action { Action(title: SiteWords.current.ok, role: .normal) }
+        static var cancel: Action { Action(title: SiteWords.current.cancel, role: .cancel) }
     }
 
     struct Dialog {

@@ -9,20 +9,11 @@ import AppKit
 /// Sign in with Apple, natively, for the site in a web view, on iOS and on the Mac alike.
 ///
 /// The site's "Sign in with Apple" is a link to `/auth/apple`, which in a browser goes to
-/// Apple's page and back. Here that would open Apple's page in Safari -- the navigation
-/// delegate sends anything that is not this site out of the app, on both platforms -- and
-/// the answer would come back to Safari's cookies rather than the web view's. So the tab
-/// stops the link (WebTabController+Navigation.swift) and signs in here instead:
-///
-/// 1. the page asks the site for a state and a nonce (`POST /auth/apple/start`), which the
-///    site keeps in the web view's session;
-/// 2. Apple's own sheet signs in with that nonce and answers with an ID token;
-/// 3. the page posts the token and the state to `/auth/apple`, as Apple's page would have,
-///    and the site checks both against the session and signs in (src/apple.rs and
-///    src/web/handlers/identity.rs in oeee-cafe/web).
-///
-/// Everything the site is asked is asked by the page, so it carries the page's cookie and
-/// origin; the app never holds the session itself.
+/// Apple's page and back. Here that would open Apple's page in Safari, and the answer would
+/// come back to Safari's cookies rather than the web view's. So the tab stops the link and
+/// the page carries the sign-in (SignIn.swift, app_sign_in.jinja in oeee-cafe/web); this is
+/// the part only the app can do, Apple's own sheet, which signs in with the nonce the page
+/// was given and answers with an ID token.
 @MainActor
 enum AppleSignIn {
     /// Whether `url` is the site's link to sign in with Apple.
@@ -33,112 +24,27 @@ enum AppleSignIn {
             && (navigationAction.request.httpMethod ?? "GET") == "GET"
     }
 
-    /// Signs in with Apple for the page in `webView`, going on to `next` afterwards.
-    static func signIn(in webView: WKWebView, next: String?) async {
-        guard let started = await start(in: webView, next: next) else {
-            Logger.warning("AppleSignIn: The site did not start a sign-in", category: Logger.auth)
-            await stay(in: webView)
-            return
-        }
-
+    /// Apple's sheet, over the window of `webView`, for `nonce`, and what it came to.
+    static func signIn(nonce: String, in webView: WKWebView) async -> SignIn.Told {
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.requestedScopes = [.fullName, .email]
-        request.nonce = started.nonce
+        request.nonce = nonce
 
         let credential: ASAuthorizationAppleIDCredential
         do {
             credential = try await Authorization(anchor: webView.window).perform(request)
         } catch let error as ASAuthorizationError where error.code == .canceled {
-            // Put away without signing in: the page stays as it was.
-            await stay(in: webView)
-            return
+            return .cancelled
         } catch {
             Logger.warning("AppleSignIn: Apple did not sign in - \(error.localizedDescription)", category: Logger.auth)
-            // The site says it could not confirm who this is, in the page's own words.
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
-            return
+            return .failed
         }
 
         guard let token = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }) else {
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
-            return
+            Logger.warning("AppleSignIn: Apple signed in with no ID token", category: Logger.auth)
+            return .failed
         }
-        var fields = ["state": started.state, "id_token": token]
-        if let user = userField(credential.fullName) {
-            fields["user"] = user
-        }
-        await answer(in: webView, fields: fields)
-    }
-
-    /// Shows the page as it was before the link was tapped. A page from before the site
-    /// knew the app took this link slid a skeleton in over itself for the page it thought
-    /// was coming (toolbar.jinja in oeee-cafe/web); nothing is coming, so it comes down,
-    /// as it does when a page cannot be reached (WebTab.swift).
-    private static func stay(in webView: WKWebView) async {
-        _ = try? await webView.evaluateJavaScript("window.oeeeRestoreContent && window.oeeeRestoreContent();")
-    }
-
-    private struct Started {
-        let state: String
-        let nonce: String
-    }
-
-    /// Asks the site, from the page, for this sign-in's state and nonce.
-    private static func start(in webView: WKWebView, next: String?) async -> Started? {
-        let script = """
-        const body = new URLSearchParams();
-        if (next) body.set("next", next);
-        const response = await fetch("/auth/apple/start", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
-        });
-        if (!response.ok) return null;
-        return await response.json();
-        """
-        let result = try? await webView.callAsyncJavaScript(
-            script,
-            arguments: ["next": next ?? NSNull()],
-            in: nil,
-            contentWorld: .defaultClient
-        )
-        guard let answer = result as? [String: Any],
-              let state = answer["state"] as? String,
-              let nonce = answer["nonce"] as? String
-        else { return nil }
-        return Started(state: state, nonce: nonce)
-    }
-
-    /// Posts Apple's answer to `/auth/apple` from the page, which the site takes it from.
-    ///
-    /// The site says where it would have sent a browser rather than sending one, and the
-    /// page goes there itself, replacing where it is: signing in and linking are then the
-    /// same one step, and neither leaves the page it started from in the history.
-    private static func answer(in webView: WKWebView, fields: [String: String]) async {
-        let script = """
-        const body = new URLSearchParams(fields);
-        body.set("format", "json");
-        const response = await fetch("/auth/apple", {
-          method: "POST",
-          credentials: "same-origin",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: body.toString(),
-        });
-        if (!response.ok) return;
-        const answer = await response.json();
-        // Replaced, not followed: the page signed in from is not left in the
-        // history behind the one it lands on, so Back does not return to a
-        // sign-in form for an account already signed in. The site's notice is
-        // waiting in the session and is shown by the page this replaces with.
-        location.replace(answer.next || "/");
-        """
-        _ = try? await webView.callAsyncJavaScript(
-            script,
-            arguments: ["fields": fields],
-            in: nil,
-            contentWorld: .defaultClient
-        )
+        return .signedIn(idToken: token, user: userField(credential.fullName))
     }
 
     /// The person's name as Apple's page would post it (`{"name": {"firstName", "lastName"}}`),

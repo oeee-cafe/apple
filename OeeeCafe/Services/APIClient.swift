@@ -37,19 +37,6 @@ final class APIClient {
         session = URLSession(configuration: configuration)
     }
 
-    /// The status the site answers a GET of `path` with, as whoever is signed in on the web
-    /// views; nil when it could not be asked.
-    func status(path: String) async -> Int? {
-        guard let url = URL(string: APIConfig.shared.baseURL + path) else { return nil }
-        var request = URLRequest(url: url)
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        for (field, value) in await WebSession.shared.cookieHeader(for: url) {
-            request.setValue(value, forHTTPHeaderField: field)
-        }
-        guard let (_, response) = try? await session.data(for: request) else { return nil }
-        return (response as? HTTPURLResponse)?.statusCode
-    }
-
     /// Posts `body` as JSON (snake_case keys) and checks that it was taken.
     func post<Body: Encodable>(path: String, body: Body) async throws {
         guard let url = URL(string: APIConfig.shared.baseURL + path) else {

@@ -1,7 +1,9 @@
 #if os(iOS)
 import UIKit
+import Combine
 
-/// NEO's ground and its 14px grid, behind the page, for where the page does not reach.
+/// The site's ground and its 14px grid, behind the page, for where the page does not reach,
+/// in the colours the pages say (SiteTheme).
 ///
 /// The site draws the grid on the document (`html`, style.css in oeee-cafe/web), and a
 /// document ends: past the last of a page scrolled to its foot is the strip the scroll view
@@ -19,6 +21,7 @@ final class PageGrid: UIView {
 
     private weak var scrollView: UIScrollView?
     private var contentSize: NSKeyValueObservation?
+    private var colours: AnyCancellable?
 
     init(under scrollView: UIScrollView) {
         self.scrollView = scrollView
@@ -32,9 +35,11 @@ final class PageGrid: UIView {
             MainActor.assumeIsolated { self?.lay() }
         }
         registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (self: Self, _) in
-            self.paint()
+            self.paint(SiteTheme.shared.colours)
         }
-        paint()
+        colours = SiteTheme.shared.$colours.sink { [weak self] colours in
+            self?.paint(colours)
+        }
     }
 
     @available(*, unavailable)
@@ -55,14 +60,15 @@ final class PageGrid: UIView {
     }
 
     /// One cell: the ground, with a 1px line along its top and its left, as the site's two
-    /// gradients draw it. Drawn again when the theme turns, a pattern colour being fixed.
-    private func paint() {
+    /// gradients draw it. Drawn again when a page says other colours and when the theme
+    /// turns, a pattern colour being fixed.
+    private func paint(_ colours: SiteTheme.Colours) {
         let traits = traitCollection
         let cell = Self.cell
         let tile = UIGraphicsImageRenderer(size: CGSize(width: cell, height: cell)).image { context in
-            UIColor(named: "Ground")!.resolvedColor(with: traits).setFill()
+            SiteTheme.ground(colours).resolvedColor(with: traits).setFill()
             context.fill(CGRect(x: 0, y: 0, width: cell, height: cell))
-            UIColor(named: "Grid")!.resolvedColor(with: traits).setFill()
+            SiteTheme.grid(colours).resolvedColor(with: traits).setFill()
             context.fill(CGRect(x: 0, y: 0, width: cell, height: 1))
             context.fill(CGRect(x: 0, y: 0, width: 1, height: cell))
         }

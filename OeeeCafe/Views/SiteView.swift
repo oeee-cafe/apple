@@ -1,10 +1,11 @@
 // The Mac app: one window onto the site, as oeee-cafe/desktop is on Steam.
 //
 // The site's toolbar is the window's title bar. The window's own title bar steps aside
-// (transparent, its traffic lights moved into the toolbar at its left), and the site is told
-// it is in the Mac app by `data-desktop="macos"` on its root element, which is what its
-// styles for the desktop app key on. Where an iPhone has a tab bar, the Mac has the site's
-// toolbar and a menu bar whose commands ask the page (`window.oeeeCommand`).
+// (transparent, its traffic lights moved into the toolbar at its left). The site knows it is
+// in the Mac app by the web view's user agent (WebTabController) and marks its own root
+// `data-desktop="macos"`, which is what its styles for the desktop app key on, room for the
+// traffic lights included. Where an iPhone has a tab bar, the Mac has the site's toolbar
+// and a menu bar whose commands ask the page (`window.oeeeCommand`).
 #if os(macOS)
 import SwiftUI
 import Combine
@@ -105,15 +106,16 @@ final class Site: ObservableObject {
     }
 }
 
-/// The window: the site, with NEO's ground under it while it arrives.
+/// The window: the site, with the site's ground under it while it arrives.
 struct SiteView: View {
     @EnvironmentObject var authService: AuthService
     @StateObject private var site = Site.shared
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
+    @ObservedObject private var theme = SiteTheme.shared
 
     var body: some View {
         ZStack {
-            Color(nsColor: SiteChrome.ground)
+            Color(nsColor: theme.ground)
             if let controller = site.controller {
                 SitePage(controller: controller)
             } else {
@@ -126,7 +128,6 @@ struct SiteView: View {
         .task {
             // Carries over a session signed in natively before showing the site.
             await WebSession.shared.start()
-            Task { await AuthService.shared.checkOnce() }
             site.start()
             // Before asking about notifications: a page waiting to be opened is what the
             // reader came for, and does not wait behind a permission they may sit on.
@@ -171,7 +172,7 @@ struct SiteView: View {
     }
 }
 
-/// The page, once it has arrived; until then NEO's ground and a spinner, or the words for
+/// The page, once it has arrived; until then the site's ground and a spinner, or the words for
 /// a site that could not be reached.
 private struct SitePage: View {
     @ObservedObject var controller: WebTabController
@@ -200,17 +201,22 @@ private struct SiteWindowSetup: NSViewRepresentable {
 
     final class WindowObserver: NSView {
         private var observations: [NSObjectProtocol] = []
+        private var ground: AnyCancellable?
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             observations.forEach(NotificationCenter.default.removeObserver)
             observations = []
+            ground = nil
             guard let window else { return }
 
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            window.backgroundColor = SiteChrome.ground
+            // The site's ground, as the pages say it, behind the page while it arrives.
+            ground = SiteTheme.shared.$colours.sink { [weak window] colours in
+                window?.backgroundColor = SiteTheme.ground(colours)
+            }
             SiteTheme.shared.apply(to: window)
             if let close = window.standardWindowButton(.closeButton) {
                 close.target = Site.shared
@@ -236,12 +242,8 @@ private struct SiteWindowSetup: NSViewRepresentable {
     }
 }
 
-/// What the site is told, and what it may ask of the window.
+/// Where the traffic lights sit, and what the page may ask of the window.
 enum SiteChrome {
-    /// NEO's ground, lavender by day and night blue by night (the asset catalog's Ground),
-    /// under the page so a load does not flash.
-    static let ground = NSColor(named: "Ground")!
-
     /// Where the traffic lights sit: their left edge, and how far down the title bar reaches
     /// so their centre meets the middle of the site's 52pt toolbar. oeee-cafe/desktop's
     /// measure.
@@ -267,8 +269,8 @@ enum SiteChrome {
 
     private static let messageName = "oeeeWindow"
 
-    /// What runs at the start of every page: the window's chrome (MacWindow.js), and a
-    /// right-click menu kept to where it is useful (QuietContextMenu.js).
+    /// What runs at the start of every page: the toolbar as the title bar (MacWindow.js),
+    /// and a right-click menu kept to where it is useful (QuietContextMenu.js).
     static var userScripts: [WKUserScript] {
         [Scripts.macWindow, Scripts.quietContextMenu].map { Scripts.atDocumentStart($0) }
     }

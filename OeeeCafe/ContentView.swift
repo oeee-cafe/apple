@@ -64,7 +64,6 @@ struct ContentView: View {
         .task {
             // Carries over a session signed in natively before anything is fetched.
             await WebSession.shared.start()
-            Task { await AuthService.shared.checkOnce() }
             web.start()
             isReady = true
             // Before asking about notifications: a page waiting to be opened is what the

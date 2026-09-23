@@ -67,16 +67,16 @@ extension WebTabController: WKNavigationDelegate {
             return .cancel
         }
         // Apple's sign-in page would open in Safari, away from this web view's session
-        // -- anything that is not this site is opened outside the app, just above --
-        // so the app signs in with Apple's own sheet instead, on either platform.
+        // -- anything that is not this site is opened outside the app, just above -- so
+        // the page signs in with Apple's own sheet instead, on either platform (SignIn).
         if isMainFrame && AppleSignIn.isSignInLink(navigationAction, site: APIConfig.shared.url) {
-            Task { await AppleSignIn.signIn(in: webView, next: Self.next(from: url)) }
+            Task { await SignIn.begin("apple", next: Self.next(from: url), in: webView) }
             return .cancel
         }
         // Google's, which Google refuses in a web view at all, on either platform: it
         // signs in in a browser of the system's instead (GoogleSignIn).
         if isMainFrame && GoogleSignIn.isSignInLink(navigationAction, site: APIConfig.shared.url) {
-            Task { await GoogleSignIn.signIn(in: webView, next: Self.next(from: url)) }
+            Task { await SignIn.begin("google", next: Self.next(from: url), in: webView) }
             return .cancel
         }
         if isMainFrame && isPainting {

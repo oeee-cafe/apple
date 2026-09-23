@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 import WebKit
 #if os(macOS)
 import AppKit
@@ -69,8 +70,8 @@ struct WebTabView: NSViewRepresentable {
 #else
 /// The container fills the screen, but the web view stops at the status bar: a page pulled
 /// down to refresh moves below it, with the spinner between, rather than under the Dynamic
-/// Island. Behind the status bar is NEO's ground, which is what the site lays its pages on
-/// (`--ds-ground`, ds.css in oeee-cafe/web), so at rest the two read as one.
+/// Island. Behind the status bar is the site's ground, as the pages say it (`--ds-ground`,
+/// SiteTheme), which is what the site lays its pages on, so at rest the two read as one.
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
 
@@ -87,6 +88,7 @@ struct WebTabView: UIViewRepresentable {
     /// into with nothing in it.
     final class Container: UIView {
         private let controller: WebTabController
+        private var ground: AnyCancellable?
 
         init(controller: WebTabController) {
             self.controller = controller
@@ -96,7 +98,9 @@ struct WebTabView: UIViewRepresentable {
             // window in (SiteTheme). Not the web view's `underPageBackgroundColor`: a web
             // view that draws no background has none to give -- it is transparent, and
             // stays so -- so asking it left the strip behind the clock black.
-            backgroundColor = UIColor(named: "Ground")
+            ground = SiteTheme.shared.$colours.sink { [weak self] colours in
+                self?.backgroundColor = SiteTheme.ground(colours)
+            }
         }
 
         @available(*, unavailable)

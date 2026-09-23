@@ -30,16 +30,24 @@ final class PushNotificationService {
         }
     }
 
+    /// Which app this is, as the site's devices name it (`platform_type`).
+    #if os(macOS)
+    private static let platform = "macos"
+    #else
+    private static let platform = "ios"
+    #endif
+
     /// Registers the token APNs gave for the signed-in user, and names it to the site's
     /// sign-out.
     func registerDeviceToken(_ deviceToken: Data) async {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         Logger.debug("Received device token: \(token)", category: Logger.app)
         do {
-            // The Mac app shares the iOS app's bundle ID, so the server's APNs topic reaches it too.
+            // The Mac app shares the iOS app's bundle ID, so the server's APNs topic reaches it
+            // too; it says it is a Mac so that the site can tell the two apart.
             try await APIClient.shared.post(
                 path: "/api/v1/devices",
-                body: RegisterDeviceRequest(deviceToken: token, platform: "ios")
+                body: RegisterDeviceRequest(deviceToken: token, platform: Self.platform)
             )
             await WebSession.shared.setDeviceCookie(token)
             Logger.info("Registered device with backend", category: Logger.app)
