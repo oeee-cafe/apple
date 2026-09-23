@@ -324,12 +324,10 @@ final class WebTabController: NSObject, ObservableObject {
             #if os(iOS)
             showPencilOnly()
             #endif
-        case .prices(let store, let products):
-            guard store == "apple" else { break }
+        case .prices(let products):
             Task { await SupporterPack.prices(of: products, in: webView) }
-        case .purchase(let purchase):
-            guard purchase.store == "apple" else { break }
-            Task { await SupporterPack.buy(purchase.product, in: webView) }
+        case .purchase(let product):
+            Task { await SupporterPack.buy(product, in: webView) }
         case .restore:
             Task { await SupporterPack.restore(in: webView) }
         case .signIn(let provider, let nonce):

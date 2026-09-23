@@ -17,8 +17,12 @@ enum SiteMessage: Equatable {
     case haptic(name: String)
     case pressed(Drawing?)
     case painterReady
-    case prices(store: String, products: [String])
-    case purchase(Purchase)
+    /// What the App Store products on /supporter cost, and one to sell, as the store names
+    /// it. The page only asks this build about its own store's (`data-store="apple"`), so
+    /// neither says which store; and the site says which product is this year's pack, so
+    /// this build sells whatever it is sent rather than knowing the year itself.
+    case prices(products: [String])
+    case purchase(product: String)
     case restore
     case signIn(provider: String, nonce: String)
     /// The Mac's window chrome (MacWindow.js), not the site: drag or zoom the window.
@@ -93,17 +97,6 @@ enum SiteMessage: Equatable {
         }
     }
 
-    /// A Supporter Pack to sell: which store it belongs to ("apple" here,
-    /// "steam" in the desktop app), the product as that store names it, and the
-    /// year it supports. A pack is a year's, so the product changes each year
-    /// and the site is what says which -- this build sells whatever it is sent
-    /// rather than knowing the year itself.
-    struct Purchase: Decodable, Equatable {
-        let store: String
-        let product: String
-        let year: Int
-    }
-
     /// A drawing a finger landed on (`data-oeee-drawing`, never a sensitive one).
     struct Drawing: Decodable, Equatable {
         let src: String
@@ -126,7 +119,7 @@ enum SiteMessage: Equatable {
         let message: SiteMessage?
 
         private enum Key: String, CodingKey {
-            case v, type, count, name, drawing, state, store, products, provider, nonce, action
+            case v, type, count, name, drawing, state, product, products, provider, nonce, action
         }
 
         init(from decoder: Decoder) throws {
@@ -149,12 +142,9 @@ enum SiteMessage: Equatable {
             case "painter":
                 message = try container.decodeIfPresent(String.self, forKey: .state) == "ready" ? .painterReady : nil
             case "prices":
-                message = .prices(
-                    store: try container.decode(String.self, forKey: .store),
-                    products: try container.decode([String].self, forKey: .products)
-                )
+                message = .prices(products: try container.decode([String].self, forKey: .products))
             case "purchase":
-                message = .purchase(try Purchase(from: decoder))
+                message = .purchase(product: try container.decode(String.self, forKey: .product))
             case "restore":
                 message = .restore
             case "signIn":
