@@ -27,13 +27,12 @@ import AppKit
 @MainActor
 enum GoogleSignIn {
     /// The iOS OAuth client id, from `GoogleClientID` in the app's Info.plist (Google Cloud
-    /// console > APIs & Services > Credentials > iOS). Empty when the build has none.
+    /// console > APIs & Services > Credentials > iOS). Empty when the build has none, and
+    /// then every sign-in with Google fails.
     static let clientID: String = {
         let value = Bundle.main.object(forInfoDictionaryKey: "GoogleClientID") as? String
         return value?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     }()
-
-    static var isAvailable: Bool { !clientID.isEmpty }
 
     /// Where Google comes back to: the client id, reversed, as Google issues it for iOS.
     /// `ASWebAuthenticationSession` catches this itself, so nothing registers the scheme.
@@ -47,7 +46,11 @@ enum GoogleSignIn {
     private static let tokenURL = "https://oauth2.googleapis.com/token"
 
     /// Google's page, over the window of `webView`, for `nonce`, and what it came to.
-    static func signIn(nonce: String, in webView: WKWebView) async -> SignIn.Told {
+    static func signIn(nonce: String?, in webView: WKWebView) async -> SignIn.Told {
+        guard !clientID.isEmpty else {
+            Logger.warning("GoogleSignIn: This build has no GoogleClientID", category: Logger.auth)
+            return .failed
+        }
         let verifier = codeVerifier()
         let code: String
         do {
@@ -77,7 +80,7 @@ enum GoogleSignIn {
     /// passes through the app.
     private static func authorize(
         in webView: WKWebView,
-        nonce: String,
+        nonce: String?,
         challenge: String
     ) async throws -> String {
         let state = randomString()
@@ -88,11 +91,13 @@ enum GoogleSignIn {
             URLQueryItem(name: "response_type", value: "code"),
             URLQueryItem(name: "scope", value: "openid email profile"),
             URLQueryItem(name: "state", value: state),
-            URLQueryItem(name: "nonce", value: nonce),
             URLQueryItem(name: "code_challenge", value: challenge),
             URLQueryItem(name: "code_challenge_method", value: "S256"),
             URLQueryItem(name: "prompt", value: "select_account")
         ]
+        if let nonce {
+            components.queryItems?.append(URLQueryItem(name: "nonce", value: nonce))
+        }
         let returned = try await Authorization(anchor: webView.window)
             .perform(url: components.url!, callbackScheme: callbackScheme)
         let answer = URLComponents(url: returned, resolvingAgainstBaseURL: false)?.queryItems ?? []

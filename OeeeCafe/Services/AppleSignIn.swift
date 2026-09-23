@@ -17,7 +17,7 @@ import AppKit
 @MainActor
 enum AppleSignIn {
     /// Apple's sheet, over the window of `webView`, for `nonce`, and what it came to.
-    static func signIn(nonce: String, in webView: WKWebView) async -> SignIn.Told {
+    static func signIn(nonce: String?, in webView: WKWebView) async -> SignIn.Told {
         let request = ASAuthorizationAppleIDProvider().createRequest()
         request.requestedScopes = [.fullName, .email]
         request.nonce = nonce

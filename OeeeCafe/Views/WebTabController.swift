@@ -67,9 +67,6 @@ final class WebTabController: NSObject, ObservableObject {
     /// Asked once a leave is already being asked about, so a second does not stack on it.
     private var isAskingToLeave = false
 
-    /// Who the page shown last said is signed in, or nil on a page that could not tell.
-    private(set) var lastSignedIn: Bool?
-
     /// Whether the last page arrived by Back or Forward, and so may be the copy the
     /// back-forward cache kept (see `pageSaid`).
     var restored = RestoredPage.none
@@ -144,10 +141,10 @@ final class WebTabController: NSObject, ObservableObject {
         }
         // A token that arrives while a page is showing is handed to that page, rather than
         // waiting for the next one to say who is signed in: the first sign-in is the page
-        // that asked for it, and may be the last page for a while. Only when the last page
-        // believed said someone is signed in, which is the same word `pageSaid` goes by.
+        // that asked for it, and may be the last page for a while. The page registers it
+        // only if someone is signed in on it, so it is not asked here.
         pushToken = PushNotificationService.shared.$token.sink { [weak self] token in
-            guard let self, self.hasLoaded, self.lastSignedIn == true, let token else { return }
+            guard let self, self.hasLoaded, let token else { return }
             self.givePushToken(token)
         }
     }
@@ -283,7 +280,6 @@ final class WebTabController: NSObject, ObservableObject {
             }
         }
         if trusted, let signedIn = page.signedIn {
-            lastSignedIn = signedIn
             AuthService.shared.pageSaid(signedIn: signedIn)
             if signedIn, let token = PushNotificationService.shared.token {
                 givePushToken(token)

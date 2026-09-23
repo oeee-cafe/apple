@@ -50,13 +50,15 @@ enum SignIn {
     }
 
     /// Runs the sheet for the nonce the page was given (`signIn`, SiteBridge), and tells the
-    /// page what it came to.
-    static func sheet(_ provider: String, nonce: String, in webView: WKWebView) async {
+    /// page what it came to. Which providers come here is the page's to decide (`WAYS`,
+    /// app_sign_in.jinja), so every one it sends is answered: one this app has no sheet for
+    /// is answered as failed, and the page says so in its own words.
+    static func sheet(_ provider: String, nonce: String?, in webView: WKWebView) async {
         let told: Told
         switch provider {
         case "apple":
             told = await AppleSignIn.signIn(nonce: nonce, in: webView)
-        case "google" where GoogleSignIn.isAvailable:
+        case "google":
             told = await GoogleSignIn.signIn(nonce: nonce, in: webView)
         default:
             Logger.warning("SignIn: No sheet signs in with \(provider)", category: Logger.auth)

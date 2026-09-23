@@ -24,7 +24,9 @@ enum SiteMessage: Equatable {
     case prices(products: [String])
     case purchase(product: String)
     case restore
-    case signIn(provider: String, nonce: String)
+    /// A sign-in the page is carrying (app_sign_in.jinja in oeee-cafe/web). The page decides
+    /// which providers come to the app, and asks for Apple and Google with a nonce.
+    case signIn(provider: String, nonce: String?)
     /// The Mac app's toolbar, which is its title bar: drag or zoom the window.
     case window(action: String)
     case words(Words)
@@ -145,7 +147,7 @@ enum SiteMessage: Equatable {
             case "signIn":
                 message = .signIn(
                     provider: try container.decode(String.self, forKey: .provider),
-                    nonce: try container.decode(String.self, forKey: .nonce)
+                    nonce: try container.decodeIfPresent(String.self, forKey: .nonce)
                 )
             case "words":
                 message = .words(try Words(from: decoder))
