@@ -14,6 +14,23 @@ enum Scripts {
     /// A page that is not the site's has nothing to lose.
     static let wouldLoseWork = "window.oeeeApp ? window.oeeeApp.wouldLoseWork() : false"
 
+    /// The site's loading bar (loading_bar.jinja in oeee-cafe/web), for a page the reader
+    /// has just agreed to leave. The page puts it up at the press for any other load, but
+    /// not for one it asks about: only the app hears the answer, and a bar put up before a
+    /// Stay would hang there. WebKit stops painting the page once the load begins, so the
+    /// bar is shown and a frame let pass first, as the page's own `oeeeLoadingBar.leave`
+    /// does -- and not waited on for longer than a moment, since a web view that is not on
+    /// the screen has no frames to wait for. Run with `callAsyncJavaScript`, for the await.
+    static let showLeaving = """
+        if (window.oeeeLoadingBar) {
+          window.oeeeLoadingBar.start(null, true);
+          await new Promise(function (resolve) {
+            requestAnimationFrame(function () { resolve(); });
+            setTimeout(resolve, 100);
+          });
+        }
+        """
+
     /// Fingers pan and pinch in the painter; the pen draws (frontend/shared/appBridge.ts).
     static let preferPen = "window.oeeeApp && window.oeeeApp.painter && window.oeeeApp.painter.preferPen();"
 

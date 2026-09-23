@@ -330,17 +330,35 @@ final class WebTabController: NSObject, ObservableObject {
 
     // MARK: - Leaving
 
+    enum LeaveAnswer {
+        /// Nothing would be lost, so nobody was asked.
+        case unasked
+        case leave
+        case stay
+    }
+
     /// Whether the page may be left: at once, unless it holds a drawing that has not been
     /// saved and the reader chooses to stay.
     func mayLeave() async -> Bool {
-        guard !isAskingToLeave else { return false }
+        await askToLeave() != .stay
+    }
+
+    /// `mayLeave`, saying as well whether the reader was asked.
+    func askToLeave() async -> LeaveAnswer {
+        guard !isAskingToLeave else { return .stay }
         let wouldLose = try? await webView.evaluateJavaScript(Scripts.wouldLoseWork, in: nil, contentWorld: .page)
         guard wouldLose as? Bool == true else {
-            return true
+            return .unasked
         }
         isAskingToLeave = true
         defer { isAskingToLeave = false }
-        return await JavaScriptDialog.confirmLeaving(in: webView)
+        return await JavaScriptDialog.confirmLeaving(in: webView) ? .leave : .stay
+    }
+
+    /// The page's loading bar, for a page the reader has just agreed to leave
+    /// (`Scripts.showLeaving`).
+    func showLeaving() async {
+        _ = try? await webView.callAsyncJavaScript(Scripts.showLeaving, arguments: [:], in: nil, contentWorld: .page)
     }
 
     // MARK: - Loading

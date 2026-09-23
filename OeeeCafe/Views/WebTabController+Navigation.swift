@@ -61,8 +61,15 @@ extension WebTabController: WKNavigationDelegate {
             return .cancel
         }
         if isMainFrame && isPainting {
-            let leave = await mayLeave()
-            if !leave { return .cancel }
+            switch await askToLeave() {
+            case .stay:
+                return .cancel
+            case .leave:
+                // The page could not put its bar up at the press, not knowing the answer.
+                await showLeaving()
+            case .unasked:
+                break
+            }
         }
         if isMainFrame {
             requestedURL = url
