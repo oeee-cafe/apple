@@ -83,15 +83,15 @@ enum GoogleSignIn {
         } catch {
             Logger.warning("GoogleSignIn: Google did not sign in - \(error.localizedDescription)", category: Logger.auth)
             // The site says it could not confirm who this is, in the page's own words.
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"], next: next)
+            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
             return
         }
 
         guard let token = await exchange(code: code, verifier: verifier) else {
-            await answer(in: webView, fields: ["state": started.state, "error": "failed"], next: next)
+            await answer(in: webView, fields: ["state": started.state, "error": "failed"])
             return
         }
-        await answer(in: webView, fields: ["state": started.state, "id_token": token], next: next)
+        await answer(in: webView, fields: ["state": started.state, "id_token": token])
     }
 
     /// Shows the page as it was before the link was tapped, as AppleSignIn does.
@@ -201,41 +201,30 @@ enum GoogleSignIn {
 
     /// Posts the answer to `/auth/google` from the page, which the site takes it from.
     ///
-    /// Linking from the account page comes back to the account page (`next`), so there it
-    /// is posted without leaving and the page is shown again where it is, with the site's
-    /// word on how it went. Signing in goes on to wherever the site sends it.
-    private static func answer(in webView: WKWebView, fields: [String: String], next: String?) async {
+    /// The site says where it would have sent a browser rather than sending one, and the
+    /// page goes there itself, replacing where it is: signing in and linking are then the
+    /// same one step, and neither leaves the page it started from in the history.
+    private static func answer(in webView: WKWebView, fields: [String: String]) async {
         let script = """
-        if (next && next === location.pathname) {
-          await fetch("/auth/google", {
-            method: "POST",
-            credentials: "same-origin",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: new URLSearchParams(fields).toString(),
-            // The site's redirect back here is not followed: following it would
-            // show its message to the fetch rather than to the page.
-            redirect: "manual",
-          });
-          location.reload();
-          return;
-        }
-        const form = document.createElement("form");
-        form.method = "post";
-        form.action = "/auth/google";
-        form.style.display = "none";
-        for (const [name, value] of Object.entries(fields)) {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
-        }
-        document.body.appendChild(form);
-        form.submit();
+        const body = new URLSearchParams(fields);
+        body.set("format", "json");
+        const response = await fetch("/auth/google", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: body.toString(),
+        });
+        if (!response.ok) return;
+        const answer = await response.json();
+        // Replaced, not followed: the page signed in from is not left in the
+        // history behind the one it lands on, so Back does not return to a
+        // sign-in form for an account already signed in. The site's notice is
+        // waiting in the session and is shown by the page this replaces with.
+        location.replace(answer.next || "/");
         """
         _ = try? await webView.callAsyncJavaScript(
             script,
-            arguments: ["fields": fields, "next": next ?? NSNull()],
+            arguments: ["fields": fields],
             in: nil,
             contentWorld: .defaultClient
         )
