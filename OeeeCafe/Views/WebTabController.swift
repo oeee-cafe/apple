@@ -58,6 +58,8 @@ final class WebTabController: NSObject, ObservableObject {
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
     lazy var pencil = UIPencilInteraction(delegate: self)
     private var observers: [NSObjectProtocol] = []
+    /// The site's ground and grid behind the page, where the page does not reach.
+    private var grid: PageGrid?
     #endif
 
     override init() {
@@ -93,10 +95,9 @@ final class WebTabController: NSObject, ObservableObject {
         // gesture, not an application's.
         webView.allowsLinkPreview = false
         #else
-        // Until the first page paints, the ground shows through (WebTabView) rather than a
-        // white web view. Past a page's ends when pulled is the ground too
-        // (underPageBackgroundColor), which the page's grid fades into at its top (style.css
-        // in oeee-cafe/web).
+        // Until the first page paints, and wherever a page does not reach -- above the home
+        // indicator at its foot, past its ends when pulled -- the ground and its grid show through
+        // (PageGrid) rather than a white web view.
         webView.isOpaque = false
         webView.backgroundColor = .clear
         #endif
@@ -114,6 +115,7 @@ final class WebTabController: NSObject, ObservableObject {
         webView.uiDelegate = self
 
         #if os(iOS)
+        grid = PageGrid(under: webView.scrollView)
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.addInteraction(pencil)
         observers = [
@@ -264,7 +266,7 @@ final class WebTabController: NSObject, ObservableObject {
         case .unread(let count):
             UnreadCount.shared.set(count)
         case .theme(let theme):
-            SiteTheme.shared.paint(ground: theme.ground)
+            SiteTheme.shared.paint(ground: theme.ground, grid: theme.grid)
             SiteTheme.shared.choose(theme.choice, in: webView.window)
         case .words(let words):
             SiteWords.current = words

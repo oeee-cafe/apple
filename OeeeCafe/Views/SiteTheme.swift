@@ -14,19 +14,20 @@ typealias PlatformColor = UIColor
 /// alerts and menus to go with the page, rather than the system's. Remembered, so the app
 /// opens in it rather than turning over once the first page says so.
 ///
-/// And the site's ground, for what the app paints where the page does not reach: the strip
-/// behind the status bar, under an overscroll, the window behind a page still arriving. The
-/// pages say it (`theme.ground`), so the app draws what the site draws rather than a copy of
-/// NEO's colours kept in step by hand; the asset catalog's Ground is only for before the
-/// first page has said.
+/// And the site's ground and grid, for what the app paints where the page does not reach:
+/// the strip behind the status bar, the grid under an overscroll, the window behind a page
+/// still arriving. The pages say both (`theme.ground`, `theme.grid`), so the app draws what
+/// the site draws rather than a copy of NEO's colours kept in step by hand; the asset
+/// catalog's Ground and Grid are only for before the first page has said.
 final class SiteTheme: ObservableObject {
     static let shared = SiteTheme()
 
     private let key = "site_theme"
 
-    /// The ground as the page last said it; nil before it has.
+    /// The ground and the grid as the page last said them; nil for one it has not said.
     struct Colours: Equatable {
         var ground: PlatformColor?
+        var grid: PlatformColor?
     }
 
     @Published private(set) var colours = Colours()
@@ -34,6 +35,11 @@ final class SiteTheme: ObservableObject {
     /// The ground in `colours`, or the asset catalog's before a page has said.
     static func ground(_ colours: Colours) -> PlatformColor {
         colours.ground ?? PlatformColor(named: "Ground")!
+    }
+
+    /// The grid in `colours`, or the asset catalog's before a page has said.
+    static func grid(_ colours: Colours) -> PlatformColor {
+        colours.grid ?? PlatformColor(named: "Grid")!
     }
 
     /// The ground now.
@@ -59,11 +65,12 @@ final class SiteTheme: ObservableObject {
         }
     }
 
-    /// What a page says the ground is, as a CSS colour. A page that does not say -- one
-    /// without the design system -- leaves it as it was.
-    func paint(ground: String?) {
-        guard ground != nil else { return }
-        let said = Colours(ground: Self.colour(css: ground))
+    /// What a page says the ground and the grid are, as CSS colours. A page that says
+    /// neither -- one without the design system, or from before it said them -- leaves
+    /// them as they were.
+    func paint(ground: String?, grid: String?) {
+        guard ground != nil || grid != nil else { return }
+        let said = Colours(ground: Self.colour(css: ground), grid: Self.colour(css: grid))
         if said != colours {
             colours = said
         }

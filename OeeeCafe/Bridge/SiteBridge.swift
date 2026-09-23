@@ -48,10 +48,11 @@ enum SiteMessage: Equatable {
     struct Theme: Decodable, Equatable {
         /// "light", "dark" or "system".
         let choice: String
-        /// The design system's ground (`--ds-ground`, ds.css in oeee-cafe/web), as a CSS
-        /// colour; nil on a page without the design system's stylesheet. The page also says
-        /// its grid, which this app has no use for.
+        /// The design system's ground and the grid ruled on it (`--ds-ground`, `--ds-grid`,
+        /// ds.css in oeee-cafe/web), as CSS colours; nil on a page without the design
+        /// system's stylesheet. Optional too because a site from before them sends neither.
         let ground: String?
+        let grid: String?
     }
 
     /// What the app says in dialogs and menus of its own over the page, in the page's
