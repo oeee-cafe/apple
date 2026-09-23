@@ -75,7 +75,12 @@ extension WebTabController: WKNavigationDelegate {
         pageFinished()
     }
 
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        endRefreshing()
+    }
+
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+        endRefreshing()
         if Self.isUnreachable(error) {
             pageUnreachable()
         }
