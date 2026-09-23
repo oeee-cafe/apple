@@ -5,8 +5,10 @@
 	<!-- The iOS OAuth client id signing in with Google uses (GoogleSignIn.swift):
 	     Google Cloud console > APIs & Services > Credentials > iOS, in the same
 	     project as the site's web client, and listed in the site's
-	     [google].app_ids so it takes the tokens that name it. Left empty, the
-	     app does not offer signing in with Google and the site shows no button.
+	     [google].app_ids so it takes the tokens that name it. Left empty, a
+	     press on the site's Google button still comes to the app -- the site
+	     sends Google to the native sheet on iOS and macOS (app_sign_in.jinja in
+	     oeee-cafe/web) -- and the app answers it as a sign-in that failed.
 	     Not a secret, and there is no secret: the sign-in is a public client
 	     with PKCE. ASWebAuthenticationSession catches Google's redirect itself,
 	     so the reversed client id needs no CFBundleURLTypes entry. -->

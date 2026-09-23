@@ -173,7 +173,7 @@ struct SiteView: View {
             // the pages then register for whoever is signed in.
             await PushNotificationService.shared.requestPermissionsAndRegister()
         } else {
-            UnreadCount.shared.clear()
+            UnreadCount.clear()
         }
     }
 

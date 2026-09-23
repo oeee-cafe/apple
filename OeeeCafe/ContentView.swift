@@ -27,7 +27,6 @@ struct ContentView: View {
                 await authenticationChanged(authService.isAuthenticated)
             }
             .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
-                web.authenticationChanged(signedIn: isAuthenticated)
                 Task { await authenticationChanged(isAuthenticated) }
             }
             .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in

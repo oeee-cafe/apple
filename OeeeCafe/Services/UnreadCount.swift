@@ -1,33 +1,24 @@
-import Foundation
-import Combine
 #if os(macOS)
 import AppKit
-#endif
 
 /// The number on the site's bell: unread notifications and invitations waiting, together,
-/// as the page says it (`unread`, SiteBridge). The Mac's Dock icon wears it.
+/// as the page says it (`unread`, SiteBridge). The Mac's Dock icon wears it. The iPhone app
+/// has no use for it: its icon's badge is the push notifications'.
 ///
-/// The site says it whenever the bell changes, so it is not asked for: before the bridge,
-/// iOS asked the API after every page and the Mac read the bell's markup, which stopped
-/// matching the day the bell changed.
-final class UnreadCount: ObservableObject {
-    static let shared = UnreadCount()
+/// The site says it whenever the bell changes, so it is not asked for.
+enum UnreadCount {
+    private static var count = 0
 
-    @Published private(set) var count = 0
-
-    private init() {}
-
-    func set(_ count: Int) {
+    static func set(_ count: Int) {
         let count = max(count, 0)
         guard count != self.count else { return }
         self.count = count
-        #if os(macOS)
         NSApp.dockTile.badgeLabel = count > 0 ? String(count) : nil
-        #endif
     }
 
     /// Signed out, there is no bell to say anything.
-    func clear() {
+    static func clear() {
         set(0)
     }
 }
+#endif

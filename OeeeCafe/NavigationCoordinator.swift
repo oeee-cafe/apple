@@ -15,7 +15,7 @@ class NavigationCoordinator: ObservableObject {
         let path: String
 
         var url: URL? {
-            URL(string: APIConfig.shared.baseURL + path)
+            SiteURL.page(path)
         }
     }
 
@@ -27,7 +27,7 @@ class NavigationCoordinator: ObservableObject {
 
     /// A link to the site from outside the app.
     func open(_ url: URL) {
-        guard let site = URL(string: APIConfig.shared.baseURL), url.host == site.host,
+        guard SiteURL.contains(url),
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
         components.scheme = nil
         components.host = nil

@@ -68,8 +68,6 @@ final class WebTabController: NSObject, ObservableObject {
     private var isAskingToLeave = false
 
     /// Who the page shown last said is signed in, or nil on a page that could not tell.
-    /// A page already showing the new answer needs no reloading after a sign-in: it is the
-    /// page that said so (`authenticationChanged`).
     private(set) var lastSignedIn: Bool?
 
     /// Whether the last page arrived by Back or Forward, and so may be the copy the
@@ -157,11 +155,8 @@ final class WebTabController: NSObject, ObservableObject {
     /// Shows the site's first page, unless a page from outside the app got there first.
     func start() {
         guard webView.url == nil else { return }
-        load(Self.home)
+        load(SiteURL.home)
     }
-
-    /// The site's front page, where the app opens.
-    private static var home: URL { URL(string: APIConfig.shared.baseURL + "/")! }
 
     func load(_ url: URL) {
         requestedURL = url
@@ -171,16 +166,7 @@ final class WebTabController: NSObject, ObservableObject {
     /// Tries the page that could not be reached again.
     func retry() {
         isUnreachable = false
-        load(requestedURL ?? webView.url ?? Self.home)
-    }
-
-    /// After signing in or out, the page showing was rendered for whoever was signed in
-    /// before -- unless it is the page that said so, which is where signing in ends and
-    /// which carries the notice that it worked. Reloading that one would throw the notice
-    /// away for nothing.
-    func authenticationChanged(signedIn: Bool) {
-        guard lastSignedIn != signedIn else { return }
-        webView.reload()
+        load(requestedURL ?? webView.url ?? SiteURL.home)
     }
 
     /// Lets the web view go: nothing it registered outlives it.
@@ -232,7 +218,11 @@ final class WebTabController: NSObject, ObservableObject {
         case .page(let page):
             pageSaid(page)
         case .unread(let count):
-            UnreadCount.shared.set(count)
+            #if os(macOS)
+            UnreadCount.set(count)
+            #else
+            _ = count
+            #endif
         case .theme(let theme):
             SiteTheme.shared.paint(ground: theme.ground)
             SiteTheme.shared.choose(theme.choice, in: webView.window)

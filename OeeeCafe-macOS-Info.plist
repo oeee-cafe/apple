@@ -7,8 +7,10 @@
 	     site takes its tokens through the same [google].app_ids entry. The Mac
 	     build generates its Info.plist from build settings, which is why this
 	     file exists at all -- there is nowhere else to put a key of our own.
-	     Left empty, the app does not offer signing in with Google and the site
-	     shows no button (theme_head.jinja in oeee-cafe/web).
+	     Left empty, a press on the site's Google button still comes to the app
+	     -- the site sends Google to the native sheet on iOS and macOS
+	     (app_sign_in.jinja in oeee-cafe/web) -- and the app answers it as a
+	     sign-in that failed.
 
 	     Xcode rewrites this file when it edits it and drops comments as it
 	     goes, so if this is missing again that is where it went. -->

@@ -10,7 +10,7 @@ import SafariServices
 /// outside the app, and a page holding a drawing asks before it is left.
 extension WebTabController: WKNavigationDelegate {
     func isSiteURL(_ url: URL) -> Bool {
-        url.host == APIConfig.shared.url.host
+        SiteURL.contains(url)
     }
 
     /// Another site, or another kind of link. On the Mac, the reader's browser. On iOS a web
