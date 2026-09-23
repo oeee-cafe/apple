@@ -1,4 +1,3 @@
-#if os(iOS)
 import Foundation
 import StoreKit
 import WebKit
@@ -20,9 +19,9 @@ import WebKit
 /// and offered again the next time the page asks for prices, which is what keeps
 /// a dropped connection from costing somebody the pack they paid for.
 ///
-/// The Mac build is not sold through the Mac App Store -- no sandbox
-/// entitlement -- so there is no store behind it to ask, and none of this is
-/// built for it.
+/// Both platforms sell it. The Mac app is sandboxed (ENABLE_APP_SANDBOX) and
+/// goes to the Mac App Store under the same bundle id as the iOS app, so it is
+/// the same product in the same store, bought and restored the same way.
 @MainActor
 enum SupporterPack {
     /// What these products cost, in the reader's own currency and formatted
@@ -169,4 +168,3 @@ enum SupporterPack {
         return true
     }
 }
-#endif
