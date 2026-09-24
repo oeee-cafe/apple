@@ -23,8 +23,9 @@ import AppKit
 /// 3. the app calls `window.oeeeApp.signIn.resume()`, and the page claims the sign-in
 ///    (`POST /auth/handoff/claim`) at once, rather than at its next turn of asking. If the
 ///    browser could not be opened, or was put away, it calls
-///    `window.oeeeApp.signIn.unopened()` instead, and the page stops waiting, so the button
-///    works again.
+///    `window.oeeeApp.signIn.unopened()` instead: the page asks the site once more -- the
+///    sheet may have been put away just after the sign-in finished -- and otherwise stops
+///    waiting, so the button works again.
 ///
 /// The browser signs nobody in to the web view: the page's claim does, with its own cookie.
 /// Nothing comes back through the app -- `oeee-cafe://handoff/done` carries nothing -- and
