@@ -113,11 +113,9 @@ final class Site {
 /// or the words for a site that could not be reached.
 struct SiteView: View {
     @ObservedObject private var controller = Site.shared.controller
-    @ObservedObject private var theme = SiteTheme.shared
 
     var body: some View {
         ZStack {
-            Color(nsColor: theme.ground)
             WebTabView(controller: controller)
                 .opacity(controller.hasLoaded ? 1 : 0)
                 .unreachable(controller)
@@ -156,7 +154,8 @@ private struct SiteWindowSetup: NSViewRepresentable {
             window.styleMask.insert(.fullSizeContentView)
             window.titlebarAppearsTransparent = true
             window.titleVisibility = .hidden
-            // The site's ground, as the pages say it, behind the page while it arrives.
+            // The site's ground, as the pages say it, behind the page while it arrives:
+            // nothing in the window paints over it but the page.
             ground = SiteTheme.shared.$colours.sink { [weak window] colours in
                 window?.backgroundColor = SiteTheme.ground(colours)
             }

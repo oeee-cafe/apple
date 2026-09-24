@@ -36,9 +36,6 @@ final class SiteTheme: ObservableObject {
         colours.ground ?? PlatformColor(named: "Ground")!
     }
 
-    /// The ground now.
-    var ground: PlatformColor { Self.ground(colours) }
-
     /// "light", "dark", or nil for the system's.
     private(set) var choice: String?
 
