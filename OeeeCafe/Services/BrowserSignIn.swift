@@ -15,7 +15,10 @@ import AppKit
 /// (app_sign_in.jinja and src/handoff.rs in oeee-cafe/web, which are the contract):
 ///
 /// 1. the page starts a handoff (`POST /auth/handoff/start`) and sends `browse {url}` on the
-///    bridge (SiteBridge), the URL of the site's own sign-in with the handoff in it;
+///    bridge (SiteBridge): Google's own sign-in page, with a state the site keeps against
+///    the handoff. Straight to Google rather than through the site, because the session
+///    first asks whether the app may use the first page's domain to sign in, and the reader
+///    pressed Sign in with Google, not oeee.cafe;
 /// 2. the app opens it in `ASWebAuthenticationSession` -- a browser of the system's, which
 ///    is what Google asks an app to use, and which the person's Safari sign-ins are already
 ///    in -- and the site's ordinary web sign-in runs there, ending on `/auth/handoff/done`,
@@ -39,12 +42,19 @@ enum BrowserSignIn {
     /// The one browser open, which is held until it answers.
     private static var running: Authorization?
 
-    /// `text` as a URL the browser may open: only the site's own, over https. The page says
-    /// where to go, and this is what keeps a page from sending the app anywhere else.
+    /// Google's sign-in page, which the site sends a Google sign-in straight to
+    /// (`handoff::AtProvider` in oeee-cafe/web).
+    static let googleSignIn = (host: "accounts.google.com", path: "/o/oauth2/v2/auth")
+
+    /// `text` as a URL the browser may open: the site's own, or Google's sign-in page, over
+    /// https. The page says where to go, and this is what keeps a page from sending the app
+    /// anywhere else.
     static func url(_ text: String) -> URL? {
-        guard let url = URL(string: text), url.scheme?.lowercased() == "https",
-              SiteURL.contains(url) else { return nil }
-        return url
+        guard let url = URL(string: text), url.scheme?.lowercased() == "https" else { return nil }
+        if SiteURL.contains(url) { return url }
+        let isGoogle = url.host?.lowercased() == googleSignIn.host && url.path == googleSignIn.path
+            && url.user == nil && url.password == nil && url.port == nil
+        return isGoogle ? url : nil
     }
 
     /// Opens `text` over the window of `webView` (`browse`, SiteBridge), and tells the page
