@@ -13,25 +13,14 @@ import WebKit
 import AppKit
 
 /// The one web view, and what the window and the menu bar ask of it.
-final class Site: ObservableObject {
+final class Site {
     static let shared = Site()
 
-    @Published private(set) var controller: WebTabController?
+    let controller = WebTabController()
 
-    private init() {}
-
-    /// Makes the web view, once the window is there to show it.
-    func start() {
-        guard controller == nil else { return }
-        let controller = WebTabController()
-        controller.start()
-        self.controller = controller
+    private init() {
         listenForSideButtons()
         listenForFullScreenKey()
-    }
-
-    func load(_ url: URL) {
-        controller?.load(url)
     }
 
     // MARK: - Commands
@@ -59,7 +48,6 @@ final class Site: ObservableObject {
     private var sideButtons: Any?
 
     private func listenForSideButtons() {
-        guard sideButtons == nil else { return }
         sideButtons = NSEvent.addLocalMonitorForEvents(
             matching: [.otherMouseDown, .otherMouseUp, .otherMouseDragged]
         ) { event in
@@ -83,7 +71,6 @@ final class Site: ObservableObject {
     private var fullScreenKey: Any?
 
     private func listenForFullScreenKey() {
-        guard fullScreenKey == nil else { return }
         fullScreenKey = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             let flags = event.modifierFlags.intersection([.command, .control, .option, .shift])
             guard flags == [.command, .control],
@@ -104,7 +91,7 @@ final class Site: ObservableObject {
     private static let forwardButton = 4
 
     private func evaluate(_ script: String) {
-        controller?.webView.evaluateJavaScript(script)
+        controller.webView.evaluateJavaScript(script)
     }
 
     // MARK: - Leaving
@@ -112,7 +99,7 @@ final class Site: ObservableObject {
     /// Whether the app may quit: at once, unless the page holds something unsaved and the
     /// player chooses to stay.
     func mayLeave() async -> Bool {
-        await controller?.mayLeave() ?? true
+        await controller.mayLeave()
     }
 
     /// Closing the window is quitting: there is one window, and the page is asked first
@@ -122,26 +109,30 @@ final class Site: ObservableObject {
     }
 }
 
-/// The window: the site, with the site's ground under it while it arrives.
+/// The window: the page, once it has arrived; until then the site's ground and a spinner,
+/// or the words for a site that could not be reached.
 struct SiteView: View {
-    @StateObject private var site = Site.shared
+    @ObservedObject private var controller = Site.shared.controller
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
     @ObservedObject private var theme = SiteTheme.shared
 
     var body: some View {
         ZStack {
             Color(nsColor: theme.ground)
-            if let controller = site.controller {
-                SitePage(controller: controller)
-            } else {
-                connecting
+            WebTabView(controller: controller)
+                .opacity(controller.hasLoaded ? 1 : 0)
+                .unreachable(controller)
+            if !controller.hasLoaded && !controller.isUnreachable {
+                ProgressView()
+                    .controlSize(.large)
+                    .accessibilityLabel("site.connecting".localized)
             }
         }
         .ignoresSafeArea()
         .background(SiteWindowSetup())
         .frame(minWidth: 800, minHeight: 600)
         .task {
-            site.start()
+            controller.start()
             openPendingNavigation()
         }
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
@@ -154,36 +145,11 @@ struct SiteView: View {
         }
     }
 
-    private var connecting: some View {
-        ProgressView()
-            .controlSize(.large)
-            .accessibilityLabel("site.connecting".localized)
-    }
-
     private func openPendingNavigation() {
-        guard site.controller != nil, let pending = navigationCoordinator.pendingNavigation else { return }
+        guard let pending = navigationCoordinator.pendingNavigation else { return }
         navigationCoordinator.clearPendingNavigation()
         if let url = pending.url {
-            site.load(url)
-        }
-    }
-}
-
-/// The page, once it has arrived; until then the site's ground and a spinner, or the words for
-/// a site that could not be reached.
-private struct SitePage: View {
-    @ObservedObject var controller: WebTabController
-
-    var body: some View {
-        ZStack {
-            WebTabView(controller: controller)
-                .opacity(controller.hasLoaded ? 1 : 0)
-                .unreachable(controller)
-            if !controller.hasLoaded && !controller.isUnreachable {
-                ProgressView()
-                    .controlSize(.large)
-                    .accessibilityLabel("site.connecting".localized)
-            }
+            controller.load(url)
         }
     }
 }
