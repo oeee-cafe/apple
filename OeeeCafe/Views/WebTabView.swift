@@ -7,8 +7,7 @@ import AppKit
 import UIKit
 #endif
 
-/// Shows the web view. The web view outlives this view, so it is hosted in a container
-/// rather than handed to SwiftUI directly.
+/// Shows the web view, in a container that lays it out.
 #if os(macOS)
 struct WebTabView: NSViewRepresentable {
     let controller: WebTabController
@@ -19,11 +18,7 @@ struct WebTabView: NSViewRepresentable {
         return container
     }
 
-    func updateNSView(_ container: NSView, context: Context) {
-        if controller.webView.superview !== container {
-            Self.attach(controller.webView, to: container)
-        }
-    }
+    func updateNSView(_ container: NSView, context: Context) {}
 }
 #else
 /// The container fills the screen, but the web view stops at the status bar: a page pulled
@@ -33,20 +28,14 @@ struct WebTabView: NSViewRepresentable {
 struct WebTabView: UIViewRepresentable {
     let controller: WebTabController
 
-    func makeUIView(context: Context) -> Container { Container(controller: controller) }
+    func makeUIView(context: Context) -> Container { Container(webView: controller.webView) }
 
-    func updateUIView(_ container: Container, context: Context) {
-        container.takeWebView()
-    }
+    func updateUIView(_ container: Container, context: Context) {}
 
-    /// The web view outlives any one container, and a view can only be in one place: the
-    /// container takes it when it is put on screen rather than when SwiftUI happens to ask.
     final class Container: UIView {
-        private let controller: WebTabController
         private var ground: AnyCancellable?
 
-        init(controller: WebTabController) {
-            self.controller = controller
+        init(webView: WKWebView) {
             super.init(frame: .zero)
             // The web view draws no ground of its own (WebTabController), so this is what
             // shows behind the status bar, in whichever of the two the site's theme put the
@@ -56,27 +45,17 @@ struct WebTabView: UIViewRepresentable {
             ground = SiteTheme.shared.$colours.sink { [weak self] colours in
                 self?.backgroundColor = SiteTheme.ground(colours)
             }
+            WebTabView.attach(webView, to: self)
         }
 
         @available(*, unavailable)
         required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-
-        override func didMoveToWindow() {
-            super.didMoveToWindow()
-            takeWebView()
-        }
-
-        func takeWebView() {
-            guard window != nil, controller.webView.superview !== self else { return }
-            WebTabView.attach(controller.webView, to: self)
-        }
     }
 }
 #endif
 
 extension WebTabView {
     static func attach(_ webView: WKWebView, to container: PlatformView) {
-        webView.removeFromSuperview()
         webView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(webView)
         #if os(macOS)

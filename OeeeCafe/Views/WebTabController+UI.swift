@@ -8,7 +8,7 @@ import UIKit
 /// WebKit asking the app for what a browser would give a page itself: new windows, the
 /// page's own dialogs, menus and file pickers.
 extension WebTabController: WKUIDelegate {
-    /// Links that ask for a new window open in this tab, or outside the app for other sites.
+    /// Links that ask for a new window open in this web view, or outside the app for other sites.
     func webView(
         _ webView: WKWebView,
         createWebViewWith configuration: WKWebViewConfiguration,
@@ -16,7 +16,7 @@ extension WebTabController: WKUIDelegate {
         windowFeatures: WKWindowFeatures
     ) -> WKWebView? {
         if let url = navigationAction.request.url {
-            if isSiteURL(url) {
+            if SiteURL.contains(url) {
                 webView.load(navigationAction.request)
             } else {
                 openOutside(url)

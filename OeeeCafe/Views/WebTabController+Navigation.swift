@@ -9,10 +9,6 @@ import SafariServices
 /// Where a link may go: the site's own pages stay in the web view, everything else goes
 /// outside the app, and a page holding a drawing asks before it is left.
 extension WebTabController: WKNavigationDelegate {
-    func isSiteURL(_ url: URL) -> Bool {
-        SiteURL.contains(url)
-    }
-
     /// Another site, or another kind of link. On the Mac, the reader's browser. On iOS a web
     /// page goes to the app that claims it, if one is installed, and otherwise opens in a
     /// Safari sheet over this one, with Done to come back; mail, phone and the like go to
@@ -56,7 +52,7 @@ extension WebTabController: WKNavigationDelegate {
         let isWebURL = url.scheme == "http" || url.scheme == "https"
 
         // Other sites (and mailto: etc.) open outside the app; embeds in frames load as usual.
-        if isMainFrame && !(isWebURL && isSiteURL(url)) && url.scheme != "about" && url.scheme != "blob" && url.scheme != "data" {
+        if isMainFrame && !(isWebURL && SiteURL.contains(url)) && url.scheme != "about" && url.scheme != "blob" && url.scheme != "data" {
             openOutside(url)
             return .cancel
         }

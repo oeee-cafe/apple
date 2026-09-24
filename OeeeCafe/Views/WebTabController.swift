@@ -77,7 +77,6 @@ final class WebTabController: NSObject, ObservableObject {
     var pressedDrawing: DrawingMenu.Drawing?
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
     lazy var pencil = UIPencilInteraction(delegate: self)
-    private var observers: [NSObjectProtocol] = []
     #endif
 
     override init() {
@@ -88,7 +87,6 @@ final class WebTabController: NSObject, ObservableObject {
         configuration.applicationNameForUserAgent = UserAgent.mark
 
         webView = WKWebView(frame: .zero, configuration: configuration)
-        webView.allowsBackForwardNavigationGestures = true
         #if os(macOS)
         // A force click on a link opens WebKit's preview of the page, which is a browser's
         // gesture, not an application's.
@@ -116,17 +114,15 @@ final class WebTabController: NSObject, ObservableObject {
         #if os(iOS)
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.addInteraction(pencil)
-        observers = [
-            NotificationCenter.default.addObserver(
-                forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-            ) { [weak self] _ in
-                // "Only Draw with Apple Pencil" may have changed while the app was away.
-                MainActor.assumeIsolated {
-                    guard let self, self.isPainting else { return }
-                    self.showPencilOnly()
-                }
-            },
-        ]
+        _ = NotificationCenter.default.addObserver(
+            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            // "Only Draw with Apple Pencil" may have changed while the app was away.
+            MainActor.assumeIsolated {
+                guard let self, self.isPainting else { return }
+                self.showPencilOnly()
+            }
+        }
         #endif
         #if os(macOS)
         // Under a page pulled past its ends, so a load does not flash either.
@@ -164,22 +160,6 @@ final class WebTabController: NSObject, ObservableObject {
     func retry() {
         isUnreachable = false
         load(requestedURL ?? webView.url ?? SiteURL.home)
-    }
-
-    /// Lets the web view go: nothing it registered outlives it.
-    func tearDown() {
-        webView.configuration.userContentController.removeAllScriptMessageHandlers()
-        webView.stopLoading()
-        connectivity = nil
-        pushToken = nil
-        #if os(macOS)
-        ground = nil
-        #endif
-        missingPageShown?.cancel()
-        #if os(iOS)
-        observers.forEach(NotificationCenter.default.removeObserver)
-        observers = []
-        #endif
     }
 
     // MARK: - Pencil
