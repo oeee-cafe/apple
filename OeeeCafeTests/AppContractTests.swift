@@ -210,7 +210,6 @@ private enum Fixture {
         struct Agent: Decodable {
             let agent: String
             let app: String?
-            let form: String?
             let store: String?
         }
 
