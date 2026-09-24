@@ -1,43 +1,19 @@
 import Foundation
-import os.log
+import os
 
-/// Centralized logging utility for the app
-/// Uses OSLog for production-ready logging with proper log levels
-enum Logger {
+/// The app's logs, one category each, called as os.Logger is. A value interpolated into a
+/// message is `<private>` outside a debugger unless it says `privacy: .public`, so what is
+/// worth reading from a device -- an error's description, a page of the site -- says so,
+/// and a token never does.
+extension Logger {
     private static let subsystem = Bundle.main.bundleIdentifier ?? "com.oeee.cafe"
 
-    /// Logger for network-related operations
-    static let network = os.Logger(subsystem: subsystem, category: "network")
+    /// Loading pages and files.
+    static let network = Logger(subsystem: subsystem, category: "network")
 
-    /// Logger for authentication operations
-    static let auth = os.Logger(subsystem: subsystem, category: "auth")
+    /// Signing in.
+    static let auth = Logger(subsystem: subsystem, category: "auth")
 
-    /// Logger for general app operations
-    static let app = os.Logger(subsystem: subsystem, category: "app")
-
-    /// Convenience methods for debug logging (only in DEBUG builds)
-    static func debug(_ message: String, category: os.Logger = Logger.app) {
-        #if DEBUG
-        category.debug("\(message)")
-        #endif
-    }
-
-    /// Log informational messages
-    static func info(_ message: String, category: os.Logger = Logger.app) {
-        category.info("\(message)")
-    }
-
-    /// Log warnings
-    static func warning(_ message: String, category: os.Logger = Logger.app) {
-        category.warning("\(message)")
-    }
-
-    /// Log errors
-    static func error(_ message: String, error: Error? = nil, category: os.Logger = Logger.app) {
-        if let error = error {
-            category.error("\(message): \(error.localizedDescription)")
-        } else {
-            category.error("\(message)")
-        }
-    }
+    /// Everything else.
+    static let app = Logger(subsystem: subsystem, category: "app")
 }

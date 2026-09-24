@@ -1,4 +1,5 @@
 import WebKit
+import os
 #if os(macOS)
 import AppKit
 #else
@@ -40,7 +41,7 @@ enum LeaveDialog {
     /// view's window, or when the web view is not in one yet, in the app's window in front.
     static func ask(in webView: WKWebView) async -> Bool {
         guard let presenter = webView.presenter else {
-            Logger.warning("LeaveDialog: No window to show a dialog in", category: Logger.app)
+            Logger.app.warning("LeaveDialog: No window to show a dialog in")
             return false
         }
         let words = SiteWords.current

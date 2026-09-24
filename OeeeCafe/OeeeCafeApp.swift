@@ -9,6 +9,7 @@ import SwiftUI
 import Sentry
 
 import UserNotifications
+import os
 
 @main
 struct OeeeCafeApp: App {
@@ -131,7 +132,7 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
         _ application: PlatformApplication,
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
-        Logger.error("Failed to register for remote notifications", error: error, category: Logger.app)
+        Logger.app.error("Failed to register for remote notifications: \(error.localizedDescription, privacy: .public)")
     }
 
     // MARK: - UNUserNotificationCenterDelegate
@@ -154,7 +155,7 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
     ) {
         let userInfo = response.notification.request.content.userInfo
 
-        Logger.info("User tapped notification, handling deep link navigation", category: Logger.app)
+        Logger.app.info("User tapped notification, handling deep link navigation")
 
         // Handle notification tap and navigate to the appropriate screen
         navigationCoordinator.handleNotificationTap(userInfo: userInfo)

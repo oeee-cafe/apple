@@ -1,4 +1,5 @@
 import WebKit
+import os
 
 /// Signing in with a sheet of the platform's own, for the site in the web view, on iOS and on
 /// the Mac alike: Sign in with Apple.
@@ -59,7 +60,7 @@ enum SignIn {
         case "apple":
             told = await AppleSignIn.signIn(nonce: nonce, in: webView)
         default:
-            Logger.warning("SignIn: No sheet signs in with \(provider)", category: Logger.auth)
+            Logger.auth.warning("SignIn: No sheet signs in with \(provider, privacy: .public)")
             told = .failed
         }
         _ = try? await webView.callAsyncJavaScript(

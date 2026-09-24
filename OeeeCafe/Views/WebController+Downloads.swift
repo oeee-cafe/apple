@@ -1,5 +1,6 @@
 import WebKit
 import UniformTypeIdentifiers
+import os
 #if os(macOS)
 import AppKit
 #else
@@ -55,7 +56,7 @@ extension WebController: WKDownloadDelegate {
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         } catch {
-            Logger.error("Failed to make a folder for a download", error: error, category: Logger.app)
+            Logger.app.error("Failed to make a folder for a download: \(error.localizedDescription, privacy: .public)")
             return nil
         }
         let name = suggestedFilename.isEmpty ? "download" : suggestedFilename
@@ -79,7 +80,7 @@ extension WebController: WKDownloadDelegate {
         }
         Haptics.play("error")
         #endif
-        Logger.error("Failed to download a file", error: error, category: Logger.network)
+        Logger.network.error("Failed to download a file: \(error.localizedDescription, privacy: .public)")
     }
 
     #if os(iOS)

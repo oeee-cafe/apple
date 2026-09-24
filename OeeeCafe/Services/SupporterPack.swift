@@ -1,6 +1,7 @@
 import Foundation
 import StoreKit
 import WebKit
+import os
 
 /// Selling the Supporter Pack, which is a year's.
 ///
@@ -37,7 +38,7 @@ enum SupporterPack {
         do {
             products = try await Product.products(for: identifiers)
         } catch {
-            Logger.error("SupporterPack: could not read prices: \(error)")
+            Logger.app.error("SupporterPack: could not read prices: \(String(describing: error), privacy: .public)")
             return
         }
         var prices: [String: String] = [:]
@@ -80,7 +81,7 @@ enum SupporterPack {
     static func buy(_ identifier: String, in webView: WKWebView) async {
         do {
             guard let product = try await Product.products(for: [identifier]).first else {
-                Logger.error("SupporterPack: the store has no \(identifier)")
+                Logger.app.error("SupporterPack: the store has no \(identifier, privacy: .public)")
                 await ended(.failed, in: webView)
                 return
             }
@@ -95,7 +96,7 @@ enum SupporterPack {
                 await ended(.failed, in: webView)
             }
         } catch {
-            Logger.error("SupporterPack: \(identifier) could not be bought: \(error)")
+            Logger.app.error("SupporterPack: \(identifier, privacy: .public) could not be bought: \(String(describing: error), privacy: .public)")
             await ended(.failed, in: webView)
         }
     }
@@ -114,7 +115,7 @@ enum SupporterPack {
         } catch {
             // A cancelled sign-in sheet lands here too, and the entitlements
             // already on the device are still worth offering.
-            Logger.error("SupporterPack: could not sync with the App Store: \(error)")
+            Logger.app.error("SupporterPack: could not sync with the App Store: \(String(describing: error), privacy: .public)")
         }
         var entitlements: [VerificationResult<StoreKit.Transaction>] = []
         for await entitlement in StoreKit.Transaction.currentEntitlements {
@@ -166,7 +167,7 @@ enum SupporterPack {
             // not by Apple: the site asks Apple about the id and Apple has never
             // heard of it, so the site refuses it. Testing the whole way through
             // needs a sandbox purchase -- run without the StoreKit configuration.
-            Logger.error("SupporterPack: handing over a transaction made in Xcode's StoreKit testing, which the site cannot confirm")
+            Logger.app.error("SupporterPack: handing over a transaction made in Xcode's StoreKit testing, which the site cannot confirm")
         }
         let answer: Any?
         do {
@@ -177,7 +178,7 @@ enum SupporterPack {
                 contentWorld: .page
             )
         } catch {
-            Logger.error("SupporterPack: the page did not answer about \(transactions.count) transaction(s): \(error)")
+            Logger.app.error("SupporterPack: the page did not answer about \(transactions.count) transaction(s): \(String(describing: error), privacy: .public)")
             return
         }
         let taken = Set((answer as? [Any] ?? []).compactMap { $0 as? String })
@@ -185,7 +186,7 @@ enum SupporterPack {
             if taken.contains(String(transaction.id)) {
                 await transaction.finish()
             } else {
-                Logger.error("SupporterPack: the site did not take \(transaction.id)")
+                Logger.app.error("SupporterPack: the site did not take \(transaction.id, privacy: .public)")
             }
         }
     }

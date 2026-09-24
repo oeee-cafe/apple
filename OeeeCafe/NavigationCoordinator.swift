@@ -1,5 +1,6 @@
 import SwiftUI
 import Combine
+import os
 
 /// Pages to open from outside the app -- a push notification, a tapped oeee.cafe link --
 /// held until there is a web view to open them in.
@@ -13,7 +14,7 @@ class NavigationCoordinator: ObservableObject {
 
     /// A page of the site, by its path (with any query), which the web view shows.
     func open(path: String) {
-        Logger.debug("NavigationCoordinator: Opening \(path)", category: Logger.app)
+        Logger.app.debug("NavigationCoordinator: Opening \(path, privacy: .public)")
         pending = SiteURL.page(path)
     }
 
@@ -24,7 +25,7 @@ class NavigationCoordinator: ObservableObject {
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
         components.scheme = SiteURL.root.scheme
         components.port = nil
-        Logger.debug("NavigationCoordinator: Opening \(url)", category: Logger.app)
+        Logger.app.debug("NavigationCoordinator: Opening \(url, privacy: .public)")
         pending = components.url
     }
 
@@ -32,7 +33,7 @@ class NavigationCoordinator: ObservableObject {
     /// which the site works out for each kind of notification; every push it sends says one).
     func handleNotificationTap(userInfo: [AnyHashable: Any]) {
         guard let path = userInfo["url"] as? String, path.hasPrefix("/"), !path.hasPrefix("//") else {
-            Logger.warning("NavigationCoordinator: A notification without a page to open", category: Logger.app)
+            Logger.app.warning("NavigationCoordinator: A notification without a page to open")
             return
         }
         open(path: path)

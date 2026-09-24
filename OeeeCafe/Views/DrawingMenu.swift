@@ -3,6 +3,7 @@ import UIKit
 import WebKit
 import Photos
 import UniformTypeIdentifiers
+import os
 
 /// The menu a long press on a drawing opens: the drawing itself as the preview, and what
 /// the Photos app offers for a picture -- Save to Photos, Copy, Share -- with the post's link
@@ -117,7 +118,7 @@ enum DrawingMenu {
                 }
                 Haptics.play("success")
             } catch {
-                Logger.error("Failed to save a drawing to Photos", error: error, category: Logger.app)
+                Logger.app.error("Failed to save a drawing to Photos: \(error.localizedDescription, privacy: .public)")
                 Haptics.play("error")
             }
         }

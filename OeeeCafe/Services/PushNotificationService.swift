@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import UserNotifications
+import os
 #if os(macOS)
 import AppKit
 #else
@@ -32,19 +33,19 @@ final class PushNotificationService {
         do {
             let granted = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
             guard granted else {
-                Logger.info("Push notification permission denied", category: Logger.app)
+                Logger.app.info("Push notification permission denied")
                 return
             }
             PlatformApplication.shared.registerForRemoteNotifications()
         } catch {
-            Logger.error("Failed to request notification permissions", error: error, category: Logger.app)
+            Logger.app.error("Failed to request notification permissions: \(error.localizedDescription, privacy: .public)")
         }
     }
 
     /// The token APNs gave, which the page showing is handed at once (WebController).
     func received(_ deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
-        Logger.debug("Received device token: \(token)", category: Logger.app)
+        Logger.app.debug("Received device token: \(token, privacy: .private)")
         self.token = token
     }
 }

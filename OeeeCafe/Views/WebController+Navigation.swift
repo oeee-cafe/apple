@@ -1,4 +1,5 @@
 import WebKit
+import os
 #if os(macOS)
 import AppKit
 #else
@@ -102,7 +103,7 @@ extension WebController: WKNavigationDelegate {
         if Self.isUnreachable(error) {
             pageUnreachable()
         }
-        Logger.warning("Web: Failed to load - \(error.localizedDescription)", category: Logger.network)
+        Logger.network.warning("Web: Failed to load - \(error.localizedDescription, privacy: .public)")
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

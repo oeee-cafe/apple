@@ -1,5 +1,6 @@
 import AuthenticationServices
 import WebKit
+import os
 #if os(iOS)
 import UIKit
 #else
@@ -28,12 +29,12 @@ enum AppleSignIn {
         } catch let error as ASAuthorizationError where error.code == .canceled {
             return .cancelled
         } catch {
-            Logger.warning("AppleSignIn: Apple did not sign in - \(error.localizedDescription)", category: Logger.auth)
+            Logger.auth.warning("AppleSignIn: Apple did not sign in - \(error.localizedDescription, privacy: .public)")
             return .failed
         }
 
         guard let token = credential.identityToken.flatMap({ String(data: $0, encoding: .utf8) }) else {
-            Logger.warning("AppleSignIn: Apple signed in with no ID token", category: Logger.auth)
+            Logger.auth.warning("AppleSignIn: Apple signed in with no ID token")
             return .failed
         }
         return .signedIn(idToken: token, user: userField(credential.fullName))

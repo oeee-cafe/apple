@@ -1,5 +1,6 @@
 import AuthenticationServices
 import WebKit
+import os
 #if os(iOS)
 import UIKit
 #else
@@ -61,7 +62,7 @@ enum BrowserSignIn {
     /// how it went.
     static func open(_ text: String, in webView: WKWebView) async {
         guard let url = url(text) else {
-            Logger.warning("BrowserSignIn: Not opening a page that is not the site's", category: Logger.auth)
+            Logger.auth.warning("BrowserSignIn: Not opening a page that is not the site's")
             await tell(Scripts.signInUnopened, in: webView)
             return
         }
@@ -69,7 +70,7 @@ enum BrowserSignIn {
         // is a page asking while one is open, and it is told no rather than closing the
         // other.
         guard running == nil else {
-            Logger.warning("BrowserSignIn: A browser is already open", category: Logger.auth)
+            Logger.auth.warning("BrowserSignIn: A browser is already open")
             await tell(Scripts.signInUnopened, in: webView)
             return
         }
@@ -83,7 +84,7 @@ enum BrowserSignIn {
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
             script = Scripts.signInUnopened
         } catch {
-            Logger.warning("BrowserSignIn: The browser did not finish - \(error.localizedDescription)", category: Logger.auth)
+            Logger.auth.warning("BrowserSignIn: The browser did not finish - \(error.localizedDescription, privacy: .public)")
             script = Scripts.signInUnopened
         }
         running = nil
