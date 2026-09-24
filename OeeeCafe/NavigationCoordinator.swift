@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 import Combine
 
 /// Pages to open from outside the app -- a push notification, a tapped oeee.cafe link --
@@ -6,33 +6,26 @@ import Combine
 class NavigationCoordinator: ObservableObject {
     static let shared = NavigationCoordinator()
 
-    /// A page to open from outside the app.
-    @Published var pendingNavigation: PendingNavigation?
+    /// A page to open from outside the app, until the web view takes it.
+    @Published private(set) var pending: URL?
 
     private init() {}
-
-    struct PendingNavigation: Equatable {
-        let path: String
-
-        var url: URL? {
-            SiteURL.page(path)
-        }
-    }
 
     /// A page of the site, by its path (with any query), which the web view shows.
     func open(path: String) {
         Logger.debug("NavigationCoordinator: Opening \(path)", category: Logger.app)
-        pendingNavigation = PendingNavigation(path: path)
+        pending = SiteURL.page(path)
     }
 
-    /// A link to the site from outside the app.
+    /// A link to the site from outside the app, opened on the site as the app reaches it
+    /// whatever scheme or port the link was written with.
     func open(_ url: URL) {
         guard SiteURL.contains(url),
               var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-        components.scheme = nil
-        components.host = nil
+        components.scheme = SiteURL.root.scheme
         components.port = nil
-        open(path: components.string ?? url.path)
+        Logger.debug("NavigationCoordinator: Opening \(url)", category: Logger.app)
+        pending = components.url
     }
 
     /// A tapped push notification opens the page it names (`url`, a path on the site,
@@ -47,8 +40,44 @@ class NavigationCoordinator: ObservableObject {
         open(path: path)
     }
 
-    /// Clear pending navigation after it has been processed
-    func clearPendingNavigation() {
-        pendingNavigation = nil
+    /// The page waiting, which is then no longer waiting.
+    fileprivate func take() -> URL? {
+        defer { pending = nil }
+        return pending
+    }
+}
+
+extension View {
+    /// Opens in `controller` the page waiting when it appears, or else the site's front page,
+    /// and every page handed to NavigationCoordinator after.
+    func opensPages(in controller: WebTabController) -> some View {
+        modifier(OpensPages(controller: controller))
+    }
+}
+
+private struct OpensPages: ViewModifier {
+    let controller: WebTabController
+    @ObservedObject private var coordinator = NavigationCoordinator.shared
+
+    func body(content: Content) -> some View {
+        content
+            .task {
+                openPending()
+                controller.start()
+            }
+            .onChange(of: coordinator.pending) {
+                openPending()
+            }
+            // A tapped oeee.cafe link, from another app (applinks, the entitlements). The Mac
+            // hands over most of them as an activity instead, which AppDelegate hears
+            // (`application(_:continue:)`).
+            .onOpenURL { url in
+                coordinator.open(url)
+            }
+    }
+
+    private func openPending() {
+        guard let url = coordinator.take() else { return }
+        controller.load(url)
     }
 }

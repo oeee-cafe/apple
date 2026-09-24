@@ -113,7 +113,6 @@ final class Site {
 /// or the words for a site that could not be reached.
 struct SiteView: View {
     @ObservedObject private var controller = Site.shared.controller
-    @StateObject private var navigationCoordinator = NavigationCoordinator.shared
     @ObservedObject private var theme = SiteTheme.shared
 
     var body: some View {
@@ -131,26 +130,7 @@ struct SiteView: View {
         .ignoresSafeArea()
         .background(SiteWindowSetup())
         .frame(minWidth: 800, minHeight: 600)
-        .task {
-            controller.start()
-            openPendingNavigation()
-        }
-        .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
-            openPendingNavigation()
-        }
-        // A clicked oeee.cafe link handed over as a URL. The Mac hands over most of them
-        // as an activity instead, which AppDelegate hears (`application(_:continue:)`).
-        .onOpenURL { url in
-            navigationCoordinator.open(url)
-        }
-    }
-
-    private func openPendingNavigation() {
-        guard let pending = navigationCoordinator.pendingNavigation else { return }
-        navigationCoordinator.clearPendingNavigation()
-        if let url = pending.url {
-            controller.load(url)
-        }
+        .opensPages(in: controller)
     }
 }
 

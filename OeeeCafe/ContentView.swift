@@ -14,29 +14,11 @@ struct ContentView: View {
     /// The app's one web view. The site's own toolbar is the only way around it, as it is in
     /// the Mac app.
     @StateObject private var web = WebTabController()
-    @StateObject private var navigationCoordinator = NavigationCoordinator.shared
 
     var body: some View {
         WebTabContent(controller: web)
-            .task {
-                openPendingNavigation()
-                web.start()
-            }
-            .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
-                openPendingNavigation()
-            }
-            // A tapped oeee.cafe link, from another app (applinks, OeeeCafe.entitlements).
-            .onOpenURL { url in
-                navigationCoordinator.open(url)
-            }
+            .opensPages(in: web)
             .background(SiteThemeApplier())
-    }
-
-    private func openPendingNavigation() {
-        guard let pending = navigationCoordinator.pendingNavigation else { return }
-        navigationCoordinator.clearPendingNavigation()
-        guard let url = pending.url else { return }
-        web.load(url)
     }
 }
 
