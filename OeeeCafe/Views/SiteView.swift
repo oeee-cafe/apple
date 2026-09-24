@@ -122,7 +122,7 @@ struct SiteView: View {
             if !controller.hasLoaded && !controller.isUnreachable {
                 ProgressView()
                     .controlSize(.large)
-                    .accessibilityLabel("site.connecting".localized)
+                    .accessibilityLabel("site.connecting")
             }
         }
         .ignoresSafeArea()
@@ -288,62 +288,62 @@ struct SiteCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appInfo) {
-            Button("menu.about".localized) { site.command(.about) }
+            Button("menu.about") { site.command(.about) }
         }
         CommandGroup(replacing: .appSettings) {
-            Button("menu.settings".localized) { site.command(.account) }
+            Button("menu.settings") { site.command(.account) }
                 .keyboardShortcut(",")
         }
         CommandGroup(replacing: .newItem) {
-            Button("menu.new_drawing".localized) { site.command(.newDrawing) }
+            Button("menu.new_drawing") { site.command(.newDrawing) }
                 .keyboardShortcut("n")
         }
         CommandGroup(replacing: .saveItem) {
-            Button("menu.close_window".localized) { site.closeWindow(nil) }
+            Button("menu.close_window") { site.closeWindow(nil) }
                 .keyboardShortcut("w")
         }
         CommandGroup(after: .pasteboard) {
             Divider()
             // The site's search, where an application keeps Find: the web view has no find
             // bar of its own, so the key is free.
-            Button("menu.search".localized) { site.command(.search) }
+            Button("menu.search") { site.command(.search) }
                 .keyboardShortcut("f")
         }
         CommandGroup(before: .toolbar) {
-            Button("menu.home".localized) { site.command(.recent) }
+            Button("menu.home") { site.command(.recent) }
                 .keyboardShortcut("1")
-            Button("menu.following".localized) { site.command(.following) }
+            Button("menu.following") { site.command(.following) }
                 .keyboardShortcut("2")
-            Button("menu.communities".localized) { site.command(.communities) }
+            Button("menu.communities") { site.command(.communities) }
                 .keyboardShortcut("3")
-            Button("menu.together".localized) { site.command(.together) }
+            Button("menu.together") { site.command(.together) }
                 .keyboardShortcut("4")
-            Button("menu.tags".localized) { site.command(.tags) }
+            Button("menu.tags") { site.command(.tags) }
                 .keyboardShortcut("5")
             Divider()
-            Button("menu.notifications".localized) { site.command(.notifications) }
+            Button("menu.notifications") { site.command(.notifications) }
                 .keyboardShortcut("n", modifiers: [.command, .shift])
-            Button("menu.drafts".localized) { site.command(.drafts) }
+            Button("menu.drafts") { site.command(.drafts) }
                 .keyboardShortcut("d", modifiers: [.command, .shift])
-            Button("menu.profile".localized) { site.command(.profile) }
+            Button("menu.profile") { site.command(.profile) }
                 .keyboardShortcut("p", modifiers: [.command, .shift])
             Divider()
-            Button("menu.back".localized) { site.back() }
+            Button("menu.back") { site.back() }
                 .keyboardShortcut("[")
-            Button("menu.forward".localized) { site.forward() }
+            Button("menu.forward") { site.forward() }
                 .keyboardShortcut("]")
-            Button("menu.reload".localized) { site.reload() }
+            Button("menu.reload") { site.reload() }
                 .keyboardShortcut("r")
             Divider()
-            Menu("menu.theme".localized) {
-                Button("menu.theme_light".localized) { site.command(.themeLight) }
-                Button("menu.theme_dark".localized) { site.command(.themeDark) }
-                Button("menu.theme_system".localized) { site.command(.themeSystem) }
+            Menu("menu.theme") {
+                Button("menu.theme_light") { site.command(.themeLight) }
+                Button("menu.theme_dark") { site.command(.themeDark) }
+                Button("menu.theme_system") { site.command(.themeSystem) }
             }
             Divider()
         }
         CommandGroup(replacing: .help) {
-            Button("menu.shortcuts".localized) { site.command(.shortcuts) }
+            Button("menu.shortcuts") { site.command(.shortcuts) }
                 .keyboardShortcut("/")
         }
     }

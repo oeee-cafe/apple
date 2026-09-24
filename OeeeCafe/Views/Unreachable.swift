@@ -39,11 +39,11 @@ struct UnreachableView: View {
                 .font(.system(size: 40, weight: .regular))
                 .foregroundStyle(.secondary)
                 .padding(.bottom, 8)
-            Text("site.unreachable_title".localized)
+            Text("site.unreachable_title")
                 .font(.headline)
-            Text("site.unreachable_body".localized)
+            Text("site.unreachable_body")
                 .foregroundStyle(.secondary)
-            Button("site.retry".localized, action: retry)
+            Button("site.retry", action: retry)
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
                 .padding(.top, 12)
@@ -76,7 +76,7 @@ private struct UnreachableModifier: ViewModifier {
             }
             .overlay(alignment: .top) {
                 if controller.isMissingPage {
-                    Label("site.unreachable_title".localized, systemImage: "wifi.slash")
+                    Label("site.unreachable_title", systemImage: "wifi.slash")
                         .font(.subheadline.weight(.medium))
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
