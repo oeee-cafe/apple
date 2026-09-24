@@ -88,9 +88,6 @@ final class WebController: NSObject, ObservableObject {
 
     override init() {
         let configuration = WKWebViewConfiguration()
-        #if os(iOS)
-        configuration.allowsInlineMediaPlayback = true
-        #endif
         configuration.applicationNameForUserAgent = UserAgent.mark
 
         webView = WKWebView(frame: .zero, configuration: configuration)
