@@ -384,7 +384,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=iphoneos*]" = "OeeeCafe-iOS-Info.plist";
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "OeeeCafe-iOS-Info.plist";
-				"INFOPLIST_FILE[sdk=macosx*]" = "OeeeCafe-macOS-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Oeee Cafe";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.graphics-design";
@@ -459,7 +458,6 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				"INFOPLIST_FILE[sdk=iphoneos*]" = "OeeeCafe-iOS-Info.plist";
 				"INFOPLIST_FILE[sdk=iphonesimulator*]" = "OeeeCafe-iOS-Info.plist";
-				"INFOPLIST_FILE[sdk=macosx*]" = "OeeeCafe-macOS-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Oeee Cafe";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.graphics-design";

@@ -1,28 +1,28 @@
 import WebKit
 
-/// Signing in with Apple and with Google, for the site in the web view, on iOS and on the
-/// Mac alike.
+/// Signing in with a sheet of the platform's own, for the site in the web view, on iOS and on
+/// the Mac alike: Sign in with Apple.
 ///
-/// The site's "Sign in with Apple" and "Sign in with Google" go to the provider's page in a
-/// browser. Here neither can: Apple's page would open in Safari -- the navigation delegate
-/// sends anything that is not this site out of the app -- and answer into Safari's cookies
-/// rather than the web view's, and Google refuses its own pages inside an embedded web view
-/// (`disallowed_useragent`). So in the app the page takes the press itself, and the page and
-/// the app carry the sign-in between them (app_sign_in.jinja in oeee-cafe/web, which is the
-/// contract):
+/// The site's "Sign in with Apple" goes to Apple's page in a browser. Here it cannot: Apple's
+/// page would open in Safari -- the navigation delegate sends anything that is not this site
+/// out of the app -- and answer into Safari's cookies rather than the web view's. So in the
+/// app the page takes the press itself, and the page and the app carry the sign-in between
+/// them (app_sign_in.jinja in oeee-cafe/web, which is the contract):
 ///
 /// 1. the page asks the site for this sign-in's state and nonce (`POST
 ///    /auth/<provider>/start`), which the site keeps in the web view's session;
 /// 2. the page sends `signIn {provider, nonce}` on the bridge (SiteBridge), and the app
-///    runs the platform's own sheet for that nonce -- Apple's (AppleSignIn), or Google's
-///    page in a browser of the system's (GoogleSignIn);
+///    runs the platform's own sheet for that nonce, Apple's (AppleSignIn);
 /// 3. the app answers with `window.oeeeApp.signIn.answer(told)`, and the page posts the token
 ///    and the state to `/auth/<provider>`, and the site checks both against the session
-///    and signs in (src/apple.rs, src/google.rs and src/web/handlers/identity.rs).
+///    and signs in (src/apple.rs and src/web/handlers/identity.rs).
 ///
 /// Everything the site is asked is asked by the page, so it carries the page's cookie and
 /// origin; the app never holds the session, never sees the state, and does not decide
 /// where the page goes afterwards.
+///
+/// Google has no such sheet, and refuses its own pages inside an embedded web view
+/// (`disallowed_useragent`), so the page hands it to a browser instead (BrowserSignIn).
 enum SignIn {
     /// What the sheet came to, as the page's `answer` takes it.
     enum Told {
@@ -58,8 +58,6 @@ enum SignIn {
         switch provider {
         case "apple":
             told = await AppleSignIn.signIn(nonce: nonce, in: webView)
-        case "google":
-            told = await GoogleSignIn.signIn(nonce: nonce, in: webView)
         default:
             Logger.warning("SignIn: No sheet signs in with \(provider)", category: Logger.auth)
             told = .failed
