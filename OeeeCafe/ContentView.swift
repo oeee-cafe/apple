@@ -11,7 +11,6 @@ import SwiftUI
 import Combine
 
 struct ContentView: View {
-    @EnvironmentObject var authService: AuthService
     /// The app's one web view. The site's own toolbar is the only way around it, as it is in
     /// the Mac app.
     @StateObject private var web = WebTabController()
@@ -20,14 +19,8 @@ struct ContentView: View {
     var body: some View {
         WebTabContent(controller: web)
             .task {
-                // Before asking about notifications: a page waiting to be opened is what the
-                // reader came for, and does not wait behind a permission they may sit on.
                 openPendingNavigation()
                 web.start()
-                await authenticationChanged(authService.isAuthenticated)
-            }
-            .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
-                Task { await authenticationChanged(isAuthenticated) }
             }
             .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
                 openPendingNavigation()
@@ -37,13 +30,6 @@ struct ContentView: View {
                 navigationCoordinator.open(url)
             }
             .background(SiteThemeApplier())
-    }
-
-    private func authenticationChanged(_ isAuthenticated: Bool) async {
-        guard isAuthenticated else { return }
-        // Asks for this device's push token (and for permission, the first time),
-        // which the pages then register for whoever is signed in.
-        await PushNotificationService.shared.requestPermissionsAndRegister()
     }
 
     private func openPendingNavigation() {
@@ -89,6 +75,5 @@ struct WebTabContent: View {
 
 #Preview {
     ContentView()
-        .environmentObject(AuthService.shared)
 }
 #endif

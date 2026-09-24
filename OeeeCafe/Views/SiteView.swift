@@ -124,7 +124,6 @@ final class Site: ObservableObject {
 
 /// The window: the site, with the site's ground under it while it arrives.
 struct SiteView: View {
-    @EnvironmentObject var authService: AuthService
     @StateObject private var site = Site.shared
     @StateObject private var navigationCoordinator = NavigationCoordinator.shared
     @ObservedObject private var theme = SiteTheme.shared
@@ -143,13 +142,7 @@ struct SiteView: View {
         .frame(minWidth: 800, minHeight: 600)
         .task {
             site.start()
-            // Before asking about notifications: a page waiting to be opened is what the
-            // reader came for, and does not wait behind a permission they may sit on.
             openPendingNavigation()
-            await authenticationChanged(authService.isAuthenticated)
-        }
-        .onChange(of: authService.isAuthenticated) { _, isAuthenticated in
-            Task { await authenticationChanged(isAuthenticated) }
         }
         .onChange(of: navigationCoordinator.pendingNavigation) { _, _ in
             openPendingNavigation()
@@ -165,16 +158,6 @@ struct SiteView: View {
         ProgressView()
             .controlSize(.large)
             .accessibilityLabel("site.connecting".localized)
-    }
-
-    private func authenticationChanged(_ isAuthenticated: Bool) async {
-        if isAuthenticated {
-            // Asks for this Mac's push token (and for permission, the first time), which
-            // the pages then register for whoever is signed in.
-            await PushNotificationService.shared.requestPermissionsAndRegister()
-        } else {
-            UnreadCount.clear()
-        }
     }
 
     private func openPendingNavigation() {

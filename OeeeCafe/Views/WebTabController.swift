@@ -67,6 +67,10 @@ final class WebTabController: NSObject, ObservableObject {
     /// Asked once a leave is already being asked about, so a second does not stack on it.
     private var isAskingToLeave = false
 
+    /// Whether someone is signed in, as the last page to be believed said (`pageSaid`); nil
+    /// before one has.
+    private var signedIn: Bool?
+
     /// Whether the last page arrived by Back or Forward, and so may be the copy the
     /// back-forward cache kept (see `pageSaid`).
     var restored = RestoredPage.none
@@ -260,10 +264,26 @@ final class WebTabController: NSObject, ObservableObject {
             }
         }
         if trusted, let signedIn = page.signedIn {
-            AuthService.shared.pageSaid(signedIn: signedIn)
+            if signedIn != self.signedIn {
+                self.signedIn = signedIn
+                signedInChanged(signedIn)
+            }
             if signedIn, let token = PushNotificationService.shared.token {
                 givePushToken(token)
             }
+        }
+    }
+
+    /// Signed in, the app asks for this device's push token (and for permission, the first
+    /// time), which the pages then register for whoever is signed in. Signed out on the Mac,
+    /// there is no bell for the Dock icon to wear.
+    private func signedInChanged(_ signedIn: Bool) {
+        if signedIn {
+            Task { await PushNotificationService.shared.requestPermissionsAndRegister() }
+        } else {
+            #if os(macOS)
+            UnreadCount.clear()
+            #endif
         }
     }
 

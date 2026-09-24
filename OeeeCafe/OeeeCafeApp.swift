@@ -17,14 +17,12 @@ struct OeeeCafeApp: App {
     #else
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     #endif
-    @StateObject private var authService = AuthService.shared
 
     var body: some Scene {
         #if os(macOS)
         // One window onto the site, as oeee-cafe/desktop is (SiteView.swift).
         Window("Oeee Cafe", id: "main") {
             SiteView()
-                .environmentObject(authService)
         }
         .windowStyle(.hiddenTitleBar)
         .defaultSize(width: 1280, height: 860)
@@ -32,7 +30,6 @@ struct OeeeCafeApp: App {
         #else
         WindowGroup {
             ContentView()
-                .environmentObject(authService)
         }
         #endif
     }
