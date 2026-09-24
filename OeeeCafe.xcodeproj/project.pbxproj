@@ -21,8 +21,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		C7A0C0012F10000100A1B2C3 /* OeeeCafeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OeeeCafeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C73E619A2EB22DD8008D4A6F /* OeeeCafe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; name = OeeeCafe.app; path = "Oeee Cafe.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C7A0C0012F10000100A1B2C3 /* OeeeCafeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = OeeeCafeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
