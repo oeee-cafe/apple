@@ -6,7 +6,7 @@ import WebKit
 /// (Apple Pencil): switch to the eraser and back, or to the tool before. What the painter
 /// has no counterpart for -- a colour palette, ink attributes -- it leaves alone. The
 /// interaction is on only while the page is the painter (`showPageState`).
-extension WebTabController: UIPencilInteractionDelegate {
+extension WebController: UIPencilInteractionDelegate {
     func pencilInteraction(_ interaction: UIPencilInteraction, didReceiveTap tap: UIPencilInteraction.Tap) {
         perform(UIPencilInteraction.preferredTapAction)
     }

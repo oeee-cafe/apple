@@ -7,7 +7,7 @@ import UIKit
 
 /// WebKit asking the app for what a browser would give a page itself: new windows, the
 /// page's own dialogs, menus and file pickers.
-extension WebTabController: WKUIDelegate {
+extension WebController: WKUIDelegate {
     /// Links that ask for a new window open in this web view, or outside the app for other sites.
     func webView(
         _ webView: WKWebView,

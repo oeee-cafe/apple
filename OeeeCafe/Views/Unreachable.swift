@@ -58,13 +58,13 @@ struct UnreachableView: View {
 extension View {
     /// What a page shows when the site cannot be reached: over the whole of it when there
     /// is nothing yet to show, and otherwise a moment's notice over the page it stayed on.
-    func unreachable(_ controller: WebTabController) -> some View {
+    func unreachable(_ controller: WebController) -> some View {
         modifier(UnreachableModifier(controller: controller))
     }
 }
 
 private struct UnreachableModifier: ViewModifier {
-    @ObservedObject var controller: WebTabController
+    @ObservedObject var controller: WebController
 
     func body(content: Content) -> some View {
         content

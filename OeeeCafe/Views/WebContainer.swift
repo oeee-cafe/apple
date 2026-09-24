@@ -9,8 +9,8 @@ import UIKit
 
 /// Shows the web view, in a container that lays it out.
 #if os(macOS)
-struct WebTabView: NSViewRepresentable {
-    let controller: WebTabController
+struct WebContainer: NSViewRepresentable {
+    let controller: WebController
 
     func makeNSView(context: Context) -> NSView {
         let container = NSView()
@@ -25,8 +25,8 @@ struct WebTabView: NSViewRepresentable {
 /// down to refresh moves below it, with the spinner between, rather than under the Dynamic
 /// Island. Behind the status bar is the site's ground, as the pages say it (`--ds-ground`,
 /// SiteTheme), which is what the site lays its pages on, so at rest the two read as one.
-struct WebTabView: UIViewRepresentable {
-    let controller: WebTabController
+struct WebContainer: UIViewRepresentable {
+    let controller: WebController
 
     func makeUIView(context: Context) -> Container { Container(webView: controller.webView) }
 
@@ -37,7 +37,7 @@ struct WebTabView: UIViewRepresentable {
 
         init(webView: WKWebView) {
             super.init(frame: .zero)
-            // The web view draws no ground of its own (WebTabController), so this is what
+            // The web view draws no ground of its own (WebController), so this is what
             // shows behind the status bar, in whichever of the two the site's theme put the
             // window in (SiteTheme). Not the web view's `underPageBackgroundColor`: a web
             // view that draws no background has none to give -- it is transparent, and
@@ -45,7 +45,7 @@ struct WebTabView: UIViewRepresentable {
             ground = SiteTheme.shared.$colours.sink { [weak self] colours in
                 self?.backgroundColor = SiteTheme.ground(colours)
             }
-            WebTabView.attach(webView, to: self)
+            WebContainer.attach(webView, to: self)
         }
 
         @available(*, unavailable)
@@ -54,7 +54,7 @@ struct WebTabView: UIViewRepresentable {
 }
 #endif
 
-extension WebTabView {
+extension WebContainer {
     static func attach(_ webView: WKWebView, to container: PlatformView) {
         webView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(webView)

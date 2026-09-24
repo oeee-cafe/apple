@@ -41,7 +41,7 @@ final class PushNotificationService {
         }
     }
 
-    /// The token APNs gave, which the page showing is handed at once (WebTabController).
+    /// The token APNs gave, which the page showing is handed at once (WebController).
     func received(_ deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
         Logger.debug("Received device token: \(token)", category: Logger.app)

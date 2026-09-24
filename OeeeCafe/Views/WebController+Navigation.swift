@@ -8,7 +8,7 @@ import SafariServices
 
 /// Where a link may go: the site's own pages stay in the web view, everything else goes
 /// outside the app, and a page holding a drawing asks before it is left.
-extension WebTabController: WKNavigationDelegate {
+extension WebController: WKNavigationDelegate {
     /// Another site, or another kind of link. On the Mac, the reader's browser. On iOS a web
     /// page goes to the app that claims it, if one is installed, and otherwise opens in a
     /// Safari sheet over this one, with Done to come back; mail, phone and the like go to
@@ -87,7 +87,7 @@ extension WebTabController: WKNavigationDelegate {
         if Self.isUnreachable(error) {
             pageUnreachable()
         }
-        Logger.warning("WebTab: Failed to load - \(error.localizedDescription)", category: Logger.network)
+        Logger.warning("Web: Failed to load - \(error.localizedDescription)", category: Logger.network)
     }
 
     func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {

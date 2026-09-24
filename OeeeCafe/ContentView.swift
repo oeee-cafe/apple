@@ -13,10 +13,10 @@ import Combine
 struct ContentView: View {
     /// The app's one web view. The site's own toolbar is the only way around it, as it is in
     /// the Mac app.
-    @StateObject private var web = WebTabController()
+    @StateObject private var web = WebController()
 
     var body: some View {
-        WebTabContent(controller: web)
+        WebContent(controller: web)
             .opensPages(in: web)
             .background(SiteThemeApplier())
     }
@@ -40,12 +40,12 @@ private struct SiteThemeApplier: UIViewRepresentable {
 
 /// The page. The painter has the whole screen, as a drawing app has: no status bar, and a
 /// swipe in from an edge draws before it goes home.
-struct WebTabContent: View {
-    @ObservedObject var controller: WebTabController
+struct WebContent: View {
+    @ObservedObject var controller: WebController
 
     var body: some View {
         let painting = controller.isPainting
-        WebTabView(controller: controller)
+        WebContainer(controller: controller)
             .ignoresSafeArea(.container)
             .unreachable(controller)
             .statusBarHidden(painting)

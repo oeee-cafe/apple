@@ -50,13 +50,13 @@ class NavigationCoordinator: ObservableObject {
 extension View {
     /// Opens in `controller` the page waiting when it appears, or else the site's front page,
     /// and every page handed to NavigationCoordinator after.
-    func opensPages(in controller: WebTabController) -> some View {
+    func opensPages(in controller: WebController) -> some View {
         modifier(OpensPages(controller: controller))
     }
 }
 
 private struct OpensPages: ViewModifier {
-    let controller: WebTabController
+    let controller: WebController
     @ObservedObject private var coordinator = NavigationCoordinator.shared
 
     func body(content: Content) -> some View {

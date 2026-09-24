@@ -46,7 +46,7 @@ enum Scripts {
     }
 
     /// This device's push token, `token`, for the page to register for whoever is signed in
-    /// on it (WebTabController). Run with `callAsyncJavaScript`.
+    /// on it (WebController). Run with `callAsyncJavaScript`.
     static let pushToken =
         "window.oeeeApp && window.oeeeApp.pushToken && window.oeeeApp.pushToken(token);"
 

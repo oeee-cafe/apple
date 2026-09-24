@@ -37,12 +37,12 @@ enum UserAgent {
 /// The app's one web view, and what the app knows of the page in it.
 ///
 /// Split by what each part answers to: this file is the page's state and what the site says
-/// about it (SiteBridge); WebTabController+Navigation.swift is where links may go;
-/// WebTabController+UI.swift is WebKit asking for windows, dialogs and menus; Pencil.swift
+/// about it (SiteBridge); WebController+Navigation.swift is where links may go;
+/// WebController+UI.swift is WebKit asking for windows, dialogs and menus; Pencil.swift
 /// is Apple Pencil in the painter.
-final class WebTabController: NSObject, ObservableObject {
+final class WebController: NSObject, ObservableObject {
     let webView: WKWebView
-    /// Whether the page is the painter, which has the whole screen (WebTabContent) and is
+    /// Whether the page is the painter, which has the whole screen (WebContent) and is
     /// not left without asking.
     @Published private(set) var isPainting = false
     /// Whether pulling the page down may reload it, as the page says.
@@ -96,7 +96,7 @@ final class WebTabController: NSObject, ObservableObject {
         // gesture, not an application's.
         webView.allowsLinkPreview = false
         #else
-        // Until the first page paints, the ground shows through (WebTabView) rather than a
+        // Until the first page paints, the ground shows through (WebContainer) rather than a
         // white web view. Past a page's ends when pulled is the ground too
         // (underPageBackgroundColor), which the page's grid fades into at its top (style.css
         // in oeee-cafe/web).
@@ -316,7 +316,7 @@ final class WebTabController: NSObject, ObservableObject {
         // keeps the strip above the home indicator to itself: a page that ends at the
         // screen's bottom edge is read past it, and a list's last row is not under the bar
         // the finger swipes up from. The painter is not read but filled, and it is given
-        // the whole screen already -- no status bar (WebTabContent) -- so that
+        // the whole screen already -- no status bar (WebContent) -- so that
         // strip is the one place left where the screen is not the painter's. Nothing paints
         // it: the web view draws no ground of its own, so what was there stays there, which
         // is the page the painter was opened from.
