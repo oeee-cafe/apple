@@ -349,7 +349,7 @@ final class WebTabController: NSObject, ObservableObject {
         }
         isAskingToLeave = true
         defer { isAskingToLeave = false }
-        return await JavaScriptDialog.confirmLeaving(in: webView) ? .leave : .stay
+        return await LeaveDialog.ask(in: webView) ? .leave : .stay
     }
 
     /// Tells the page the reader has just agreed to leave it, and waits for it to show that

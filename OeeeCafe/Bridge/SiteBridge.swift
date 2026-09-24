@@ -161,7 +161,7 @@ enum SiteMessage: Equatable {
 }
 
 /// The words the page on screen last sent (`words`), for the app's own dialogs and menus
-/// over it (JavaScriptDialog, DrawingMenu): English until a page has spoken.
+/// over it (LeaveDialog, DrawingMenu): English until a page has spoken.
 enum SiteWords {
     static var current = SiteMessage.Words()
 }

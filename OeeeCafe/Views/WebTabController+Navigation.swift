@@ -25,7 +25,7 @@ extension WebTabController: WKNavigationDelegate {
             if await UIApplication.shared.open(url, options: [.universalLinksOnly: true]) {
                 return
             }
-            guard let presenter = JavaScriptDialog.presenter(for: webView) else {
+            guard let presenter = webView.presenter else {
                 await UIApplication.shared.open(url)
                 return
             }
