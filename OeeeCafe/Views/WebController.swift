@@ -81,6 +81,9 @@ final class WebController: NSObject, ObservableObject {
     var pressedDrawing: DrawingMenu.Drawing?
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
     lazy var pencil = UIPencilInteraction(delegate: self)
+    /// Where each download under way is being written, to offer once it is done
+    /// (WebController+Downloads.swift).
+    var downloadDestinations: [ObjectIdentifier: URL] = [:]
     #endif
 
     override init() {

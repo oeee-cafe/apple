@@ -50,6 +50,14 @@ extension WebController: WKNavigationDelegate {
         guard let url = navigationAction.request.url else { return .allow }
         let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
         let isWebURL = url.scheme == "http" || url.scheme == "https"
+        let isLocal = url.scheme == "blob" || url.scheme == "data"
+
+        // A link with `download` is a file to keep, not a page to leave for, so the painter
+        // does not ask about leaving (WebController+Downloads.swift). Another site's link
+        // is followed as a link, as a browser does.
+        if navigationAction.shouldPerformDownload && (isLocal || (isWebURL && SiteURL.contains(url))) {
+            return .download
+        }
 
         // Other sites (and mailto: etc.) open outside the app; embeds in frames load as usual.
         if isMainFrame && !(isWebURL && SiteURL.contains(url)) && url.scheme != "about" && url.scheme != "blob" && url.scheme != "data" {
@@ -72,6 +80,13 @@ extension WebController: WKNavigationDelegate {
             restored = navigationAction.navigationType == .backForward ? .arriving : .none
         }
         return .allow
+    }
+
+    func webView(
+        _ webView: WKWebView,
+        decidePolicyFor navigationResponse: WKNavigationResponse
+    ) async -> WKNavigationResponsePolicy {
+        Self.isDownload(navigationResponse) ? .download : .allow
     }
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
