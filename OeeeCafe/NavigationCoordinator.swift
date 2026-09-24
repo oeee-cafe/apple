@@ -29,12 +29,10 @@ class NavigationCoordinator: ObservableObject {
     }
 
     /// A tapped push notification opens the page it names (`url`, a path on the site,
-    /// which the site works out for each kind of notification), or the notifications,
-    /// where every one of them can be found.
+    /// which the site works out for each kind of notification; every push it sends says one).
     func handleNotificationTap(userInfo: [AnyHashable: Any]) {
         guard let path = userInfo["url"] as? String, path.hasPrefix("/"), !path.hasPrefix("//") else {
             Logger.warning("NavigationCoordinator: A notification without a page to open", category: Logger.app)
-            open(path: "/notifications")
             return
         }
         open(path: path)
