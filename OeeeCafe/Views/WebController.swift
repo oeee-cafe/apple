@@ -233,6 +233,8 @@ final class WebController: NSObject, ObservableObject {
             Task { await SupporterPack.restore(in: webView) }
         case .signIn(let provider, let nonce):
             Task { await SignIn.sheet(provider, nonce: nonce, in: webView) }
+        case .browse(let url):
+            Task { await BrowserSignIn.open(url, in: webView) }
         case .window(let action):
             #if os(macOS)
             SiteChrome.windowAsked(action, of: webView.window)

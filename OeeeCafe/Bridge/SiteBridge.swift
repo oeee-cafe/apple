@@ -27,6 +27,10 @@ enum SiteMessage: Equatable {
     /// A sign-in the page is carrying (app_sign_in.jinja in oeee-cafe/web). The page decides
     /// which providers come to the app, and asks for Apple and Google with a nonce.
     case signIn(provider: String, nonce: String?)
+    /// A page of the site to open in a browser of the system's (BrowserSignIn): a sign-in
+    /// the page has handed off. The URL is as the page sent it; the app checks it is the
+    /// site's before opening it.
+    case browse(url: String)
     /// The Mac app's toolbar, which is its title bar: drag or zoom the window.
     case window(action: String)
     case words(Words)
@@ -116,7 +120,7 @@ enum SiteMessage: Equatable {
         let message: SiteMessage?
 
         private enum Key: String, CodingKey {
-            case v, type, count, name, drawing, state, product, products, provider, nonce, action
+            case v, type, count, name, drawing, state, product, products, provider, nonce, url, action
         }
 
         init(from decoder: Decoder) throws {
@@ -149,6 +153,8 @@ enum SiteMessage: Equatable {
                     provider: try container.decode(String.self, forKey: .provider),
                     nonce: try container.decodeIfPresent(String.self, forKey: .nonce)
                 )
+            case "browse":
+                message = .browse(url: try container.decode(String.self, forKey: .url))
             case "words":
                 message = .words(try Words(from: decoder))
             case "window":

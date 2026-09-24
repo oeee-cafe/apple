@@ -55,6 +55,22 @@ enum Scripts {
     static let signInAnswer =
         "window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.answer(told);"
 
+    /// The browser a sign-in was handed to has finished (BrowserSignIn): the page claims the
+    /// sign-in now rather than at its next turn of asking (app_sign_in.jinja). Run with
+    /// `callAsyncJavaScript`.
+    static let signInResume = """
+        window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.resume \
+        && window.oeeeApp.signIn.resume();
+        """
+
+    /// The browser a sign-in was handed to could not be opened, or was put away without
+    /// finishing (BrowserSignIn): the page stops waiting for it, so its button works again.
+    /// Run with `callAsyncJavaScript`.
+    static let signInUnopened = """
+        window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.unopened \
+        && window.oeeeApp.signIn.unopened();
+        """
+
     /// The store's prices, `prices`, for the Supporter Pack's buttons (SupporterPack,
     /// supporter.jinja). Run with `callAsyncJavaScript`.
     static let storePrices = """
@@ -81,8 +97,8 @@ enum Scripts {
     static var all: [String] {
         [
             wouldLoseWork, leaving, preferPen, painterCommand("toggle-eraser"),
-            siteCommand(.recent), pushToken, signInAnswer, storePrices, storeEnded,
-            storePurchased,
+            siteCommand(.recent), pushToken, signInAnswer, signInResume, signInUnopened,
+            storePrices, storeEnded, storePurchased,
         ]
     }
 

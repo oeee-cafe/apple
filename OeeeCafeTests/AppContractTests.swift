@@ -68,13 +68,26 @@ struct AppContractTests {
         #expect(SiteMessage(body: "not json") == nil)
     }
 
-    /// The types this app reads; the rest are other apps' (`browse`, `share`, `download`,
-    /// `caption`) and are ignored.
+    /// A page the page hands to a browser, as the page says it, is one the app opens
+    /// (BrowserSignIn).
+    @Test func aPageToBrowseIsOneTheAppOpens() throws {
+        let examples = try #require(try Fixture.messages()["browse"])
+        for example in examples {
+            guard case .browse(let url) = SiteMessage(body: try Fixture.string(example)) else {
+                Issue.record("\(example) is not heard as browse")
+                continue
+            }
+            #expect(BrowserSignIn.url(url)?.absoluteString == url)
+        }
+    }
+
+    /// The types this app reads; the rest are other apps' (`share`, `download`, `caption`)
+    /// and are ignored.
     private static let handled: Set<String> = [
         "page", "unread", "theme", "words", "haptic", "pressed", "painter", "prices",
-        "purchase", "restore", "signIn", "window",
+        "purchase", "restore", "signIn", "browse", "window",
     ]
-    private static let ignored: Set<String> = ["browse", "share", "download", "caption"]
+    private static let ignored: Set<String> = ["share", "download", "caption"]
 
     /// What the app should make of `example`, worked out from the example itself rather than
     /// by the parser under test.
@@ -127,6 +140,8 @@ struct AppContractTests {
             return .restore
         case "signIn":
             return .signIn(provider: try field(example, "provider"), nonce: example["nonce"] as? String)
+        case "browse":
+            return .browse(url: try field(example, "url"))
         case "window":
             return .window(action: try field(example, "action"))
         default:
