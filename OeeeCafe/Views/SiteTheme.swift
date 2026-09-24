@@ -25,15 +25,11 @@ final class SiteTheme: ObservableObject {
     private let key = "site_theme"
 
     /// The ground as the page last said it; nil before it has.
-    struct Colours: Equatable {
-        var ground: PlatformColor?
-    }
+    @Published private(set) var pageGround: PlatformColor?
 
-    @Published private(set) var colours = Colours()
-
-    /// The ground in `colours`, or the asset catalog's before a page has said.
-    static func ground(_ colours: Colours) -> PlatformColor {
-        colours.ground ?? PlatformColor(named: "Ground")!
+    /// `pageGround`, or the asset catalog's before a page has said.
+    static func ground(_ pageGround: PlatformColor?) -> PlatformColor {
+        pageGround ?? PlatformColor(named: "Ground")!
     }
 
     /// "light", "dark", or nil for the system's.
@@ -60,9 +56,9 @@ final class SiteTheme: ObservableObject {
     /// without the design system -- leaves it as it was.
     func paint(ground: String?) {
         guard ground != nil else { return }
-        let said = Colours(ground: Self.colour(css: ground))
-        if said != colours {
-            colours = said
+        let colour = Self.colour(css: ground)
+        if colour != pageGround {
+            pageGround = colour
         }
     }
 

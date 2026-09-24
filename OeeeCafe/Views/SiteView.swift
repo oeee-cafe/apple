@@ -96,12 +96,6 @@ final class Site {
 
     // MARK: - Leaving
 
-    /// Whether the app may quit: at once, unless the page holds something unsaved and the
-    /// player chooses to stay.
-    func mayLeave() async -> Bool {
-        await controller.mayLeave()
-    }
-
     /// Closing the window is quitting: there is one window, and the page is asked first
     /// either way (AppDelegate's `applicationShouldTerminate`).
     @objc func closeWindow(_ sender: Any?) {
@@ -156,8 +150,8 @@ private struct SiteWindowSetup: NSViewRepresentable {
             window.titleVisibility = .hidden
             // The site's ground, as the pages say it, behind the page while it arrives:
             // nothing in the window paints over it but the page.
-            ground = SiteTheme.shared.$colours.sink { [weak window] colours in
-                window?.backgroundColor = SiteTheme.ground(colours)
+            ground = SiteTheme.shared.$pageGround.sink { [weak window] colour in
+                window?.backgroundColor = SiteTheme.ground(colour)
             }
             SiteTheme.shared.apply(to: window)
             if let close = window.standardWindowButton(.closeButton) {

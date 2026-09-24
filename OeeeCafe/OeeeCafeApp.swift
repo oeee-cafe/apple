@@ -78,10 +78,10 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
     }
 
     /// ⌘Q, the Dock and logging out all ask here first: a page holding an unsaved drawing
-    /// is asked before it is left.
+    /// is asked before it is left, and the app quits unless the reader chooses to stay.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         Task {
-            sender.reply(toApplicationShouldTerminate: await Site.shared.mayLeave())
+            sender.reply(toApplicationShouldTerminate: await Site.shared.controller.askToLeave() != .stay)
         }
         return .terminateLater
     }

@@ -7,18 +7,8 @@ import AppKit
 ///
 /// The site says it whenever the bell changes, so it is not asked for.
 enum UnreadCount {
-    private static var count = 0
-
     static func set(_ count: Int) {
-        let count = max(count, 0)
-        guard count != self.count else { return }
-        self.count = count
         NSApp.dockTile.badgeLabel = count > 0 ? String(count) : nil
-    }
-
-    /// Signed out, there is no bell to say anything.
-    static func clear() {
-        set(0)
     }
 }
 #endif

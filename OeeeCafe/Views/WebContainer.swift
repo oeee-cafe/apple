@@ -42,8 +42,8 @@ struct WebContainer: UIViewRepresentable {
             // window in (SiteTheme). Not the web view's `underPageBackgroundColor`: a web
             // view that draws no background has none to give -- it is transparent, and
             // stays so -- so asking it left the strip behind the clock black.
-            ground = SiteTheme.shared.$colours.sink { [weak self] colours in
-                self?.backgroundColor = SiteTheme.ground(colours)
+            ground = SiteTheme.shared.$pageGround.sink { [weak self] colour in
+                self?.backgroundColor = SiteTheme.ground(colour)
             }
             WebContainer.attach(webView, to: self)
         }

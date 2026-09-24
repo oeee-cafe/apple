@@ -133,8 +133,8 @@ final class WebController: NSObject, ObservableObject {
         #endif
         #if os(macOS)
         // Under a page pulled past its ends, so a load does not flash either.
-        ground = SiteTheme.shared.$colours.sink { [weak self] colours in
-            self?.webView.underPageBackgroundColor = SiteTheme.ground(colours)
+        ground = SiteTheme.shared.$pageGround.sink { [weak self] colour in
+            self?.webView.underPageBackgroundColor = SiteTheme.ground(colour)
         }
         #endif
         showPageState()
@@ -287,7 +287,7 @@ final class WebController: NSObject, ObservableObject {
             Task { await PushNotificationService.shared.requestPermissionsAndRegister() }
         } else {
             #if os(macOS)
-            UnreadCount.clear()
+            UnreadCount.set(0)
             #endif
         }
     }
@@ -340,12 +340,7 @@ final class WebController: NSObject, ObservableObject {
     }
 
     /// Whether the page may be left: at once, unless it holds a drawing that has not been
-    /// saved and the reader chooses to stay.
-    func mayLeave() async -> Bool {
-        await askToLeave() != .stay
-    }
-
-    /// `mayLeave`, saying as well whether the reader was asked.
+    /// saved and the reader chooses to stay; and whether the reader was asked.
     func askToLeave() async -> LeaveAnswer {
         guard !isAskingToLeave else { return .stay }
         let wouldLose = try? await webView.evaluateJavaScript(Scripts.wouldLoseWork, in: nil, contentWorld: .page)

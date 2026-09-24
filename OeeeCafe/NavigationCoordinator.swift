@@ -12,12 +12,6 @@ class NavigationCoordinator: ObservableObject {
 
     private init() {}
 
-    /// A page of the site, by its path (with any query), which the web view shows.
-    func open(path: String) {
-        Logger.app.debug("NavigationCoordinator: Opening \(path, privacy: .public)")
-        pending = SiteURL.page(path)
-    }
-
     /// A link to the site from outside the app, opened on the site as the app reaches it
     /// whatever scheme or port the link was written with.
     func open(_ url: URL) {
@@ -36,7 +30,8 @@ class NavigationCoordinator: ObservableObject {
             Logger.app.warning("NavigationCoordinator: A notification without a page to open")
             return
         }
-        open(path: path)
+        Logger.app.debug("NavigationCoordinator: Opening \(path, privacy: .public)")
+        pending = SiteURL.page(path)
     }
 
     /// The page waiting, which is then no longer waiting.
