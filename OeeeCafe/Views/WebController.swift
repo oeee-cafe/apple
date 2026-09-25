@@ -199,11 +199,7 @@ final class WebController: NSObject, ObservableObject {
         case .page(let page):
             pageSaid(page)
         case .unread(let count):
-            #if os(macOS)
             UnreadCount.set(count)
-            #else
-            _ = count
-            #endif
         case .theme(let theme):
             SiteTheme.shared.paint(ground: theme.ground)
             SiteTheme.shared.choose(theme.choice, in: webView.window)
@@ -277,15 +273,13 @@ final class WebController: NSObject, ObservableObject {
     }
 
     /// Signed in, the app asks for this device's push token (and for permission, the first
-    /// time), which the pages then register for whoever is signed in. Signed out on the Mac,
-    /// there is no bell for the Dock icon to wear.
+    /// time), which the pages then register for whoever is signed in. Signed out, there is no
+    /// bell for the Dock icon or the app icon to wear.
     private func signedInChanged(_ signedIn: Bool) {
         if signedIn {
             Task { await PushNotificationService.shared.requestPermissionsAndRegister() }
         } else {
-            #if os(macOS)
             UnreadCount.set(0)
-            #endif
         }
     }
 
