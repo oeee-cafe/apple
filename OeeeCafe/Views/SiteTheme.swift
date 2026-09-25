@@ -82,11 +82,15 @@ final class SiteTheme: ObservableObject {
 
     func apply(to window: PlatformWindow) {
         #if os(macOS)
+        let appearance: NSAppearance?
         switch choice {
-        case "light": window.appearance = NSAppearance(named: .aqua)
-        case "dark": window.appearance = NSAppearance(named: .darkAqua)
-        default: window.appearance = nil
+        case "light": appearance = NSAppearance(named: .aqua)
+        case "dark": appearance = NSAppearance(named: .darkAqua)
+        default: appearance = nil
         }
+        // Every page says the choice, and each new appearance lays the title bar out again.
+        guard window.appearance?.name != appearance?.name else { return }
+        window.appearance = appearance
         #else
         let style: UIUserInterfaceStyle
         switch choice {

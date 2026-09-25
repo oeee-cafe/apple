@@ -136,12 +136,14 @@ private struct SiteWindowSetup: NSViewRepresentable {
 
     final class WindowObserver: NSView {
         private var observations: [NSObjectProtocol] = []
+        private var appearances: [NSKeyValueObservation] = []
         private var ground: AnyCancellable?
 
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
             observations.forEach(NotificationCenter.default.removeObserver)
             observations = []
+            appearances = []
             ground = nil
             guard let window else { return }
 
@@ -186,6 +188,17 @@ private struct SiteWindowSetup: NSViewRepresentable {
                     }
                 }
             )
+            // A new appearance -- the site's light or dark, which the first page says
+            // (SiteTheme), or the system's -- lays the title bar out again too, and says
+            // so to no one but its observers.
+            appearances = [
+                window.observe(\.appearance) { window, _ in
+                    MainActor.assumeIsolated { SiteChrome.placeTrafficLights(in: window) }
+                },
+                window.observe(\.effectiveAppearance) { window, _ in
+                    MainActor.assumeIsolated { SiteChrome.placeTrafficLights(in: window) }
+                },
+            ]
             SiteChrome.placeTrafficLights(in: window)
         }
     }
