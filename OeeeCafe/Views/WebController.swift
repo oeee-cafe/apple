@@ -103,9 +103,10 @@ final class WebController: NSObject, ObservableObject {
         webView.isOpaque = false
         webView.backgroundColor = .clear
         #endif
-        #if DEBUG
+        // In release builds too: a bug in the painter shows on the installed app, in
+        // whatever state the reader got it into, and Safari's Web Inspector is how that
+        // state is read.
         webView.isInspectable = true
-        #endif
 
         super.init()
 
