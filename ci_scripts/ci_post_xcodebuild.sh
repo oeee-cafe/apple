@@ -17,7 +17,7 @@ fi
 brew install getsentry/tools/sentry-cli || exit 0
 sentry-cli debug-files upload \
   --org limeburst \
-  --project oeee-cafe-ios \
+  --project oeee-cafe-apple \
   --include-sources \
   "$CI_ARCHIVE_PATH/dSYMs" ||
   echo "Uploading dSYMs to Sentry failed"
