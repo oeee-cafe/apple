@@ -85,7 +85,7 @@ struct AppContractTests {
     /// and are ignored.
     private static let handled: Set<String> = [
         "page", "unread", "theme", "words", "haptic", "pressed", "painter", "prices",
-        "purchase", "restore", "signIn", "browse", "window",
+        "purchase", "restore", "signIn", "browse", "window", "password",
     ]
     private static let ignored: Set<String> = ["share", "download", "caption"]
 
@@ -144,6 +144,8 @@ struct AppContractTests {
             return .browse(url: try field(example, "url"))
         case "window":
             return .window(action: try field(example, "action"))
+        case "password":
+            return .password(id: try field(example, "id"))
         default:
             Issue.record("""
                 The contract has a message this test does not know, \(type): read it in \

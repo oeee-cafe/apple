@@ -31,6 +31,9 @@ enum SiteMessage: Equatable {
     /// the page has handed off, which is Google's. The URL is as the page sent it; the app
     /// checks it is the site's before opening it.
     case browse(url: String)
+    /// The reader went to a field of a form that takes a saved password: offer them one
+    /// (SavedPassword), and answer with the id the page asked with. Only the Mac's pages ask.
+    case password(id: String)
     /// The Mac app's toolbar, which is its title bar: drag or zoom the window.
     case window(action: String)
     case words(Words)
@@ -120,7 +123,7 @@ enum SiteMessage: Equatable {
         let message: SiteMessage?
 
         private enum Key: String, CodingKey {
-            case v, type, count, name, drawing, state, product, products, provider, nonce, url, action
+            case v, type, count, name, drawing, state, product, products, provider, nonce, url, action, id
         }
 
         init(from decoder: Decoder) throws {
@@ -155,6 +158,8 @@ enum SiteMessage: Equatable {
                 )
             case "browse":
                 message = .browse(url: try container.decode(String.self, forKey: .url))
+            case "password":
+                message = .password(id: try container.decode(String.self, forKey: .id))
             case "words":
                 message = .words(try Words(from: decoder))
             case "window":

@@ -25,7 +25,11 @@ enum AppleSignIn {
 
         let credential: ASAuthorizationAppleIDCredential
         do {
-            credential = try await Authorization(anchor: webView.window).perform(request)
+            let authorization = try await AuthorizationSheet.perform(request, over: webView)
+            guard let apple = authorization.credential as? ASAuthorizationAppleIDCredential else {
+                throw ASAuthorizationError(.unknown)
+            }
+            credential = apple
         } catch let error as ASAuthorizationError where error.code == .canceled {
             return .cancelled
         } catch {
@@ -51,63 +55,5 @@ enum AppleSignIn {
               let data = try? JSONSerialization.data(withJSONObject: ["name": parts])
         else { return nil }
         return String(data: data, encoding: .utf8)
-    }
-
-    /// One ASAuthorizationController run, as an async call. Holds itself until Apple answers.
-    private final class Authorization: NSObject, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
-        /// `UIWindow` on iOS, `NSWindow` on the Mac; `webView.window` is each.
-        private let anchor: ASPresentationAnchor?
-        private var continuation: CheckedContinuation<ASAuthorizationAppleIDCredential, Error>?
-
-        init(anchor: ASPresentationAnchor?) {
-            self.anchor = anchor
-        }
-
-        /// Where `performRequests()` is called from, and only it; see `perform`.
-        private nonisolated static let flow = DispatchQueue(
-            label: "cafe.oeee.apple-sign-in",
-            qos: .utility
-        )
-
-        /// `performRequests()` sets Apple's side of the flow up before it returns, waiting on
-        /// a worker of AuthenticationServices' own at the default quality of service. Called
-        /// from the main thread, which is user-interactive, that is the priority inversion the
-        /// runtime complains of. It gives way to a queue of this class's own, fixed below the
-        /// worker it waits on, since an explicit queue quality of service outranks the
-        /// submitting context's. Nothing higher waits on anything lower either way round.
-        ///
-        /// Only the call goes there. The flow is set up here on the main actor, and the
-        /// framework comes back to it of its own accord for the sheet and for the answer:
-        /// `ASAuthorizationController` is not `NS_SWIFT_UI_ACTOR`, but both protocols it calls
-        /// back through are.
-        func perform(_ request: ASAuthorizationAppleIDRequest) async throws -> ASAuthorizationAppleIDCredential {
-            try await withCheckedThrowingContinuation { continuation in
-                self.continuation = continuation
-                // Nothing here holds the controller: AuthenticationServices keeps it until it
-                // has called the delegate, which is the whole of its life.
-                nonisolated(unsafe) let controller = ASAuthorizationController(authorizationRequests: [request])
-                controller.delegate = self
-                controller.presentationContextProvider = self
-                Self.flow.async { controller.performRequests() }
-            }
-        }
-
-        func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
-            anchor ?? ASPresentationAnchor()
-        }
-
-        func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-            if let credential = authorization.credential as? ASAuthorizationAppleIDCredential {
-                continuation?.resume(returning: credential)
-            } else {
-                continuation?.resume(throwing: ASAuthorizationError(.unknown))
-            }
-            continuation = nil
-        }
-
-        func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
-            continuation?.resume(throwing: error)
-            continuation = nil
-        }
     }
 }

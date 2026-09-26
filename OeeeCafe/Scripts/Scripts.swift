@@ -55,6 +55,11 @@ enum Scripts {
     static let signInAnswer =
         "window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.answer(told);"
 
+    /// What the saved-password sheet came to, `told` (SavedPassword), for the page to fill
+    /// its form with (app_saved_password.jinja). Run with `callAsyncJavaScript`.
+    static let passwordAnswer =
+        "window.oeeeApp && window.oeeeApp.password && window.oeeeApp.password.answer(told);"
+
     /// The browser a sign-in was handed to has finished (BrowserSignIn): the page claims the
     /// sign-in now rather than at its next turn of asking (app_sign_in.jinja). Run with
     /// `callAsyncJavaScript`.
@@ -97,7 +102,7 @@ enum Scripts {
     static var all: [String] {
         [
             wouldLoseWork, leaving, preferPen, painterCommand("toggle-eraser"),
-            siteCommand(.recent), pushToken, signInAnswer, signInResume, signInUnopened,
+            siteCommand(.recent), pushToken, signInAnswer, signInResume, signInUnopened, passwordAnswer,
             storePrices, storeEnded, storePurchased,
         ]
     }
