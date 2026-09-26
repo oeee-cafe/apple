@@ -4,6 +4,7 @@
 "menu.new_drawing" = "新建画作";
 "menu.close_window" = "关闭窗口";
 "menu.search" = "搜索…";
+"menu.jump" = "快速跳转…";
 "menu.home" = "首页";
 "menu.following" = "时间线";
 "menu.communities" = "社区";

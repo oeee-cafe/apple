@@ -119,7 +119,7 @@ enum Scripts {
 /// names `oeeeApp.command` takes, which the contract lists (appContract.json's `commands`).
 enum SiteCommand: String, CaseIterable {
     case recent, following, communities, together, tags, search, notifications, drafts
-    case profile, account, about, shortcuts
+    case profile, account, about, shortcuts, jump
     case newDrawing = "new-drawing"
     case themeLight = "theme-light"
     case themeDark = "theme-dark"

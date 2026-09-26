@@ -4,6 +4,7 @@
 "menu.new_drawing" = "새 그림";
 "menu.close_window" = "윈도우 닫기";
 "menu.search" = "검색…";
+"menu.jump" = "바로 가기…";
 "menu.home" = "홈";
 "menu.following" = "타임라인";
 "menu.communities" = "커뮤";

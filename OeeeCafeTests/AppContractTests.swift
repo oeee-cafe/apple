@@ -81,13 +81,14 @@ struct AppContractTests {
         }
     }
 
-    /// The types this app reads; the rest are other apps' (`share`, `download`, `caption`)
-    /// and are ignored.
+    /// The types this app reads; the rest are other apps' (`share`, `download`, `caption`,
+    /// and `notify`, which Windows is handed for want of the push this app is sent) and are
+    /// ignored.
     private static let handled: Set<String> = [
         "page", "unread", "theme", "words", "haptic", "pressed", "painter", "prices",
         "purchase", "restore", "signIn", "browse", "window", "password",
     ]
-    private static let ignored: Set<String> = ["share", "download", "caption"]
+    private static let ignored: Set<String> = ["share", "download", "caption", "notify"]
 
     /// What the app should make of `example`, worked out from the example itself rather than
     /// by the parser under test.

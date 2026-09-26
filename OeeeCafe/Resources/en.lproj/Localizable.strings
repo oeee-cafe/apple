@@ -4,6 +4,7 @@
 "menu.new_drawing" = "New Drawing";
 "menu.close_window" = "Close Window";
 "menu.search" = "Search…";
+"menu.jump" = "Jump to…";
 "menu.home" = "Home";
 "menu.following" = "Following";
 "menu.communities" = "Communities";

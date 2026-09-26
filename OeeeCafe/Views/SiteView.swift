@@ -315,6 +315,9 @@ struct SiteCommands: Commands {
             // bar of its own, so the key is free.
             Button("menu.search") { site.command(.search) }
                 .keyboardShortcut("f")
+            // The site's quick switcher: communities, tags, pages and a handle, by name.
+            Button("menu.jump") { site.command(.jump) }
+                .keyboardShortcut("k")
         }
         CommandGroup(before: .toolbar) {
             Button("menu.home") { site.command(.recent) }
