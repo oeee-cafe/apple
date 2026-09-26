@@ -267,7 +267,7 @@ final class WebController: NSObject, ObservableObject {
         if trusted, let signedIn = page.signedIn {
             if signedIn != self.signedIn {
                 self.signedIn = signedIn
-                signedInChanged(signedIn)
+                signedInChanged(signedIn, at: page.path)
             }
             if signedIn, let token = PushNotificationService.shared.token {
                 givePushToken(token)
@@ -277,12 +277,16 @@ final class WebController: NSObject, ObservableObject {
 
     /// Signed in, the app asks for this device's push token (and for permission, the first
     /// time), which the pages then register for whoever is signed in, and hands the site any
-    /// purchase it has not yet taken (SupporterPack.handUnfinished). Signed out, there is no
-    /// bell for the Dock icon or the app icon to wear.
-    private func signedInChanged(_ signedIn: Bool) {
+    /// purchase it has not yet taken (SupporterPack.handUnfinished) -- except on /supporter,
+    /// which hands them over itself as it asks for prices, so that they are not handed twice
+    /// and the page reloaded twice. Signed out, there is no bell for the Dock icon or the app
+    /// icon to wear.
+    private func signedInChanged(_ signedIn: Bool, at path: String) {
         if signedIn {
             Task { await PushNotificationService.shared.requestPermissionsAndRegister() }
-            Task { await SupporterPack.handUnfinished(in: webView) }
+            if path != "/supporter" {
+                Task { await SupporterPack.handUnfinished(in: webView) }
+            }
         } else {
             UnreadCount.set(0)
         }
