@@ -276,11 +276,13 @@ final class WebController: NSObject, ObservableObject {
     }
 
     /// Signed in, the app asks for this device's push token (and for permission, the first
-    /// time), which the pages then register for whoever is signed in. Signed out, there is no
+    /// time), which the pages then register for whoever is signed in, and hands the site any
+    /// purchase it has not yet taken (SupporterPack.handUnfinished). Signed out, there is no
     /// bell for the Dock icon or the app icon to wear.
     private func signedInChanged(_ signedIn: Bool) {
         if signedIn {
             Task { await PushNotificationService.shared.requestPermissionsAndRegister() }
+            Task { await SupporterPack.handUnfinished(in: webView) }
         } else {
             UnreadCount.set(0)
         }

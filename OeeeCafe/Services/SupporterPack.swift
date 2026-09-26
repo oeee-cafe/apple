@@ -101,10 +101,13 @@ enum SupporterPack {
     /// in, one bought on another device.
     ///
     /// Done as the page asks for prices, which is the page someone opens when
-    /// the pack they paid for is not there. `listenForUpdates` hears purchases
-    /// as they arrive, but only while a page is open to take them; this is what
-    /// catches the rest.
-    private static func handUnfinished(in webView: WKWebView) async {
+    /// the pack they paid for is not there, and as a page first says someone
+    /// is signed in (WebController), which is the first a purchase can be
+    /// taken by the site after the app launches or after one made signed out.
+    /// `listenForUpdates` hears purchases as they arrive, but StoreKit gives
+    /// it those left unfinished as the app launches, before any page is there
+    /// to take them; this is what catches them.
+    static func handUnfinished(in webView: WKWebView) async {
         var unfinished: [VerificationResult<StoreKit.Transaction>] = []
         for await transaction in StoreKit.Transaction.unfinished {
             unfinished.append(transaction)
