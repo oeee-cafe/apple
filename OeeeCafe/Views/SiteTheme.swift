@@ -27,9 +27,19 @@ final class SiteTheme: ObservableObject {
     /// The ground as the page last said it; nil before it has.
     @Published private(set) var pageGround: PlatformColor?
 
+    /// The toolbar's ground as the page last said it (`theme.toolbar`); nil before it has,
+    /// or from a site that does not say.
+    @Published private(set) var pageToolbar: PlatformColor?
+
     /// `pageGround`, or the asset catalog's before a page has said.
     static func ground(_ pageGround: PlatformColor?) -> PlatformColor {
         pageGround ?? PlatformColor(named: "Ground")!
+    }
+
+    /// What is drawn directly above the toolbar -- the strip behind the status bar -- so the
+    /// two are one bar: the toolbar's ground, or the page's where the toolbar's is not said.
+    static func toolbar(_ pageToolbar: PlatformColor?, ground pageGround: PlatformColor?) -> PlatformColor {
+        pageToolbar ?? ground(pageGround)
     }
 
     /// "light", "dark", or nil for the system's.
@@ -52,13 +62,17 @@ final class SiteTheme: ObservableObject {
         }
     }
 
-    /// What a page says the ground is, as a CSS colour. A page that does not say -- one
-    /// without the design system -- leaves it as it was.
-    func paint(ground: String?) {
+    /// What a page says the ground and the toolbar's ground are, as CSS colours. A page that
+    /// does not say -- one without the design system -- leaves them as they were.
+    func paint(ground: String?, toolbar: String?) {
         guard ground != nil else { return }
         let colour = Self.colour(css: ground)
         if colour != pageGround {
             pageGround = colour
+        }
+        let bar = Self.colour(css: toolbar)
+        if bar != pageToolbar {
+            pageToolbar = bar
         }
     }
 

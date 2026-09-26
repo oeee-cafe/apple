@@ -201,7 +201,7 @@ final class WebController: NSObject, ObservableObject {
         case .unread(let count):
             UnreadCount.set(count)
         case .theme(let theme):
-            SiteTheme.shared.paint(ground: theme.ground)
+            SiteTheme.shared.paint(ground: theme.ground, toolbar: theme.toolbar)
             SiteTheme.shared.choose(theme.choice, in: webView.window)
         case .words(let words):
             SiteWords.current = words

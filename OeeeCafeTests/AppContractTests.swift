@@ -107,7 +107,8 @@ struct AppContractTests {
         case "theme":
             return .theme(SiteMessage.Theme(
                 choice: try field(example, "choice"),
-                ground: example["ground"] as? String
+                ground: example["ground"] as? String,
+                toolbar: example["toolbar"] as? String
             ))
         case "words":
             var words = SiteMessage.Words()

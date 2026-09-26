@@ -23,8 +23,9 @@ struct WebContainer: NSViewRepresentable {
 #else
 /// The container fills the screen, but the web view stops at the status bar: a page pulled
 /// down to refresh moves below it, with the spinner between, rather than under the Dynamic
-/// Island. Behind the status bar is the site's ground, as the pages say it (`--ds-ground`,
-/// SiteTheme), which is what the site lays its pages on, so at rest the two read as one.
+/// Island. Behind the status bar is the toolbar's ground, as the pages say it
+/// (`--ds-toolbar`, SiteTheme), which is what the top of every page is, so at rest the strip
+/// and the toolbar read as one bar.
 struct WebContainer: UIViewRepresentable {
     let controller: WebController
 
@@ -41,10 +42,14 @@ struct WebContainer: UIViewRepresentable {
             // shows behind the status bar, in whichever of the two the site's theme put the
             // window in (SiteTheme). Not the web view's `underPageBackgroundColor`: a web
             // view that draws no background has none to give -- it is transparent, and
-            // stays so -- so asking it left the strip behind the clock black.
-            ground = SiteTheme.shared.$pageGround.sink { [weak self] colour in
-                self?.backgroundColor = SiteTheme.ground(colour)
-            }
+            // stays so -- so asking it left the strip behind the clock black. The toolbar's
+            // ground rather than the page's: the strip is the toolbar's top, and a toolbar
+            // of its own colour under a strip of the page's showed a seam across the screen.
+            ground = SiteTheme.shared.$pageGround
+                .combineLatest(SiteTheme.shared.$pageToolbar)
+                .sink { [weak self] ground, toolbar in
+                    self?.backgroundColor = SiteTheme.toolbar(toolbar, ground: ground)
+                }
             WebContainer.attach(webView, to: self)
         }
 

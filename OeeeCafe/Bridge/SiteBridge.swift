@@ -61,6 +61,9 @@ enum SiteMessage: Equatable {
         /// colour; nil on a page without the design system's stylesheet. The page also says
         /// its grid, which this app has no use for.
         let ground: String?
+        /// The toolbar's own ground (`--ds-toolbar`), which the strip behind the status bar
+        /// is painted in so the two read as one bar; nil where the page does not say.
+        let toolbar: String?
     }
 
     /// What the app says in dialogs and menus of its own over the page, in the page's
