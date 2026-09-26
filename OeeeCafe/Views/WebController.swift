@@ -114,6 +114,7 @@ final class WebController: NSObject, ObservableObject {
         }
         webView.navigationDelegate = self
         webView.uiDelegate = self
+        SupporterPack.adopt(webView)
 
         #if os(iOS)
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)

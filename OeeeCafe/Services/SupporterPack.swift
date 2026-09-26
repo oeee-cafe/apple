@@ -28,30 +28,42 @@ import os
 /// the same product in the same store, bought and restored the same way.
 @MainActor
 enum SupporterPack {
-    /// The web view that last asked the store for something: the page showing
-    /// the pack, which is the one that can hand a purchase to the site.
+    /// Every web view onto the site, any of which can hand a purchase to the
+    /// site: the store script is on every page (app_store.jinja in
+    /// oeee-cafe/web), and only /supporter reloads once the site has it.
+    private static let webViews = NSHashTable<WKWebView>.weakObjects()
+
+    /// The web view that last asked the store for something, which is showing
+    /// the pack, or was: preferred, since /supporter shows a purchase taken.
     private static weak var page: WKWebView?
 
     private static var updates: Task<Void, Never>?
 
+    /// A web view onto the site, for purchases that arrive unasked to be handed
+    /// to.
+    static func adopt(_ webView: WKWebView) {
+        webViews.add(webView)
+    }
+
     /// Listens, for as long as the app runs, for purchases that arrive other
     /// than as the answer to a press here -- one a parent approved after it was
     /// left pending, one bought on another device, a refund -- and hands each
-    /// to the page that last asked the store for something.
+    /// to the page that last asked the store for something, or else to any page
+    /// open on the site.
     ///
     /// There is one listener, not one for each web view, so each purchase is
-    /// handed over once. With no such page open, or one that has since gone
-    /// elsewhere on the site, nothing is finished, and the purchase is offered
-    /// again the next time the page asks for prices.
+    /// handed over once. With no page open that takes it -- none at all, or one
+    /// still loading as the app launches -- nothing is finished, and the
+    /// purchase is offered again the next time /supporter asks for prices.
     static func listenForUpdates() {
         guard updates == nil else { return }
         updates = Task {
             for await update in StoreKit.Transaction.updates {
-                guard let page else {
-                    Logger.app.info("SupporterPack: \(update.unsafePayloadValue.id, privacy: .public) arrived with no store page open")
+                guard let webView = page ?? webViews.anyObject else {
+                    Logger.app.info("SupporterPack: \(update.unsafePayloadValue.id, privacy: .public) arrived with no page open")
                     continue
                 }
-                await hand(over: [update], in: page)
+                await hand(over: [update], in: webView)
             }
         }
     }
@@ -90,8 +102,8 @@ enum SupporterPack {
     ///
     /// Done as the page asks for prices, which is the page someone opens when
     /// the pack they paid for is not there. `listenForUpdates` hears purchases
-    /// as they arrive, but only while such a page is open to take them; this is
-    /// what catches the rest.
+    /// as they arrive, but only while a page is open to take them; this is what
+    /// catches the rest.
     private static func handUnfinished(in webView: WKWebView) async {
         var unfinished: [VerificationResult<StoreKit.Transaction>] = []
         for await transaction in StoreKit.Transaction.unfinished {
@@ -105,8 +117,8 @@ enum SupporterPack {
     /// A purchase the person cancels, one the store leaves pending -- asking
     /// a parent, say -- and one that fails hand the page nothing, and are
     /// told to it as the way the press ended. The pending one is handed over
-    /// when it goes through, if this page is still open (`listenForUpdates`),
-    /// and otherwise the next time the page asks for prices, like anything else
+    /// when it goes through, if the app is open (`listenForUpdates`), and
+    /// otherwise the next time the page asks for prices, like anything else
     /// the site never heard about.
     static func buy(_ identifier: String, in webView: WKWebView) async {
         page = webView
