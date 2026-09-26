@@ -28,12 +28,41 @@ import os
 /// the same product in the same store, bought and restored the same way.
 @MainActor
 enum SupporterPack {
+    /// The web view that last asked the store for something: the page showing
+    /// the pack, which is the one that can hand a purchase to the site.
+    private static weak var page: WKWebView?
+
+    private static var updates: Task<Void, Never>?
+
+    /// Listens, for as long as the app runs, for purchases that arrive other
+    /// than as the answer to a press here -- one a parent approved after it was
+    /// left pending, one bought on another device, a refund -- and hands each
+    /// to the page that last asked the store for something.
+    ///
+    /// There is one listener, not one for each web view, so each purchase is
+    /// handed over once. With no such page open, or one that has since gone
+    /// elsewhere on the site, nothing is finished, and the purchase is offered
+    /// again the next time the page asks for prices.
+    static func listenForUpdates() {
+        guard updates == nil else { return }
+        updates = Task {
+            for await update in StoreKit.Transaction.updates {
+                guard let page else {
+                    Logger.app.info("SupporterPack: \(update.unsafePayloadValue.id, privacy: .public) arrived with no store page open")
+                    continue
+                }
+                await hand(over: [update], in: page)
+            }
+        }
+    }
+
     /// What these products cost, in the reader's own currency and formatted
     /// the store's way, handed to the page for the buttons that are waiting
     /// for them. A product the store does not know is simply not in the
     /// answer, and its button keeps its price to itself.
     static func prices(of identifiers: [String], in webView: WKWebView) async {
         guard !identifiers.isEmpty else { return }
+        page = webView
         let products: [Product]
         do {
             products = try await Product.products(for: identifiers)
@@ -60,9 +89,9 @@ enum SupporterPack {
     /// in, one bought on another device.
     ///
     /// Done as the page asks for prices, which is the page someone opens when
-    /// the pack they paid for is not there -- rather than from a listener
-    /// living for as long as the app, which each web view would keep one of and
-    /// each would hand the same purchase over again.
+    /// the pack they paid for is not there. `listenForUpdates` hears purchases
+    /// as they arrive, but only while such a page is open to take them; this is
+    /// what catches the rest.
     private static func handUnfinished(in webView: WKWebView) async {
         var unfinished: [VerificationResult<StoreKit.Transaction>] = []
         for await transaction in StoreKit.Transaction.unfinished {
@@ -75,10 +104,12 @@ enum SupporterPack {
     ///
     /// A purchase the person cancels, one the store leaves pending -- asking
     /// a parent, say -- and one that fails hand the page nothing, and are
-    /// told to it as the way the press ended. The pending one is still
-    /// unfinished when it goes through, so it is handed over the next time this
-    /// page asks for prices, like anything else the site never heard about.
+    /// told to it as the way the press ended. The pending one is handed over
+    /// when it goes through, if this page is still open (`listenForUpdates`),
+    /// and otherwise the next time the page asks for prices, like anything else
+    /// the site never heard about.
     static func buy(_ identifier: String, in webView: WKWebView) async {
+        page = webView
         do {
             guard let product = try await Product.products(for: [identifier]).first else {
                 Logger.app.error("SupporterPack: the store has no \(identifier, privacy: .public)")

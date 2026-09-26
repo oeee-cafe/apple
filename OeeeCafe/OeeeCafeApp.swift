@@ -117,6 +117,10 @@ class AppDelegate: NSObject, PlatformApplicationDelegate, UNUserNotificationCent
 
         // Set notification delegate
         UNUserNotificationCenter.current().delegate = self
+
+        MainActor.assumeIsolated {
+            SupporterPack.listenForUpdates()
+        }
     }
 
     // Called when APNs successfully registers the device
