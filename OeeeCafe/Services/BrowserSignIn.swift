@@ -8,7 +8,7 @@ import AppKit
 #endif
 
 /// Signing in on the site's own web pages, in a browser of the system's, for the site in the
-/// web view: Google, on iOS and on the Mac alike.
+/// web view: Google and Discord, on iOS and on the Mac alike.
 ///
 /// Google refuses its own sign-in pages inside an embedded web view
 /// (`disallowed_useragent`), and there is no sheet of the platform's own for it as there is
@@ -16,10 +16,10 @@ import AppKit
 /// (app_sign_in.jinja and src/handoff.rs in oeee-cafe/web, which are the contract):
 ///
 /// 1. the page starts a handoff (`POST /auth/handoff/start`) and sends `browse {url}` on the
-///    bridge (SiteBridge): Google's own sign-in page, with a state the site keeps against
-///    the handoff. Straight to Google rather than through the site, because the session
-///    first asks whether the app may use the first page's domain to sign in, and the reader
-///    pressed Sign in with Google, not oeee.cafe;
+///    bridge (SiteBridge): the provider's own sign-in page, Google's or Discord's, with a
+///    state the site keeps against the handoff. Straight to the provider rather than through
+///    the site, because the session first asks whether the app may use the first page's
+///    domain to sign in, and the reader pressed Sign in with Google or Discord, not oeee.cafe;
 /// 2. the app opens it in `ASWebAuthenticationSession` -- a browser of the system's, which
 ///    is what Google asks an app to use, and which the person's Safari sign-ins are already
 ///    in -- and the site's ordinary web sign-in runs there, ending on `/auth/handoff/done`,
@@ -47,19 +47,23 @@ enum BrowserSignIn {
     /// The one browser open, which is held until it answers.
     private static var running: Authorization?
 
-    /// Google's sign-in page, which the site sends a Google sign-in straight to
-    /// (`handoff::AtProvider` in oeee-cafe/web).
-    static let googleSignIn = (host: "accounts.google.com", path: "/o/oauth2/v2/auth")
+    /// The providers' sign-in pages, which the site sends a Google or Discord sign-in straight
+    /// to (`handoff::AtProvider` in oeee-cafe/web).
+    static let providerSignIns = [
+        (host: "accounts.google.com", path: "/o/oauth2/v2/auth"),
+        (host: "discord.com", path: "/oauth2/authorize"),
+    ]
 
-    /// `text` as a URL the browser may open: the site's own, or Google's sign-in page, over
+    /// `text` as a URL the browser may open: the site's own, or a provider's sign-in page, over
     /// https. The page says where to go, and this is what keeps a page from sending the app
     /// anywhere else.
     static func url(_ text: String) -> URL? {
         guard let url = URL(string: text), url.scheme?.lowercased() == "https" else { return nil }
         if SiteURL.contains(url) { return url }
-        let isGoogle = url.host?.lowercased() == googleSignIn.host && url.path == googleSignIn.path
-            && url.user == nil && url.password == nil && url.port == nil
-        return isGoogle ? url : nil
+        guard url.user == nil, url.password == nil, url.port == nil else { return nil }
+        let host = url.host?.lowercased()
+        let isProvider = providerSignIns.contains { $0.host == host && $0.path == url.path }
+        return isProvider ? url : nil
     }
 
     /// The handoff's code that `callback` (`oeee-cafe://handoff/done?code=<code>`) brings
@@ -143,8 +147,8 @@ enum BrowserSignIn {
                     }
                 }
                 session.presentationContextProvider = self
-                // The person's Google sign-in lives in Safari; an ephemeral session would
-                // ask them for it again every time.
+                // The person's Google and Discord sign-ins live in Safari; an ephemeral
+                // session would ask them for them again every time.
                 session.prefersEphemeralWebBrowserSession = false
                 self.session = session
                 if !session.start() {

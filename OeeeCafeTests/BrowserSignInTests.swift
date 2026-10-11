@@ -2,7 +2,7 @@ import Foundation
 import Testing
 @testable import OeeeCafe
 
-/// Only the site's own pages and Google's sign-in page, over https, are opened in the browser
+/// Only the site's own pages and Google's and Discord's sign-in pages, over https, are opened in the browser
 /// a sign-in is handed to: the page says where to go, and this is what keeps it from sending
 /// the app elsewhere.
 struct BrowserSignInTests {
@@ -11,8 +11,9 @@ struct BrowserSignInTests {
         "https://oeee.cafe/",
         "HTTPS://oeee.cafe/auth/google",
         "https://accounts.google.com/o/oauth2/v2/auth?client_id=C&state=S&nonce=N",
+        "https://discord.com/oauth2/authorize?client_id=C&response_type=code&state=S",
     ])
-    func theSitesOwnPageOrGooglesSignInIsOpened(url: String) {
+    func theSitesOwnPageOrAProvidersSignInIsOpened(url: String) {
         #expect(BrowserSignIn.url(url) != nil)
     }
 
@@ -25,6 +26,16 @@ struct BrowserSignInTests {
         "https://accounts.google.com@evil.example/o/oauth2/v2/auth",
         "https://user@accounts.google.com/o/oauth2/v2/auth",
         "https://accounts.google.com:8443/o/oauth2/v2/auth",
+        "http://discord.com/oauth2/authorize",
+        "https://discord.com/",
+        "https://discord.com/oauth2/authorizex",
+        "https://discord.com/api/oauth2/authorize",
+        "https://discord.com.example/oauth2/authorize",
+        "https://discord.com@evil.example/oauth2/authorize",
+        "https://user@discord.com/oauth2/authorize",
+        "https://discord.com:8443/oauth2/authorize",
+        "https://accounts.google.com/oauth2/authorize",
+        "https://discord.com/o/oauth2/v2/auth",
         "https://oeee.cafe.example.com/auth/google",
         "https://evil.example/?https://oeee.cafe/",
         "https://oeee.cafe@evil.example/",
