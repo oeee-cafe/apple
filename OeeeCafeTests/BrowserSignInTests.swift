@@ -36,4 +36,49 @@ struct BrowserSignInTests {
     func anyOtherPageIsNot(url: String) {
         #expect(BrowserSignIn.url(url) == nil)
     }
+
+    // MARK: - The code the browser brings back
+
+    @Test func theCodeTheCallbackBringsIsTaken() throws {
+        let callback = try #require(URL(string: "oeee-cafe://handoff/done?code=\(handoffCode)"))
+        #expect(BrowserSignIn.handoffCode(in: callback) == handoffCode)
+    }
+
+    /// A code goes into a script, so only exactly 64 lowercase hex digits are one: not upper
+    /// case, not one digit short or over, not anything that is not hex, and not none.
+    @Test(arguments: [
+        "oeee-cafe://handoff/done",
+        "oeee-cafe://handoff/done?code=",
+        "oeee-cafe://handoff/done?other=\(handoffCode)",
+        "oeee-cafe://handoff/done?code=\(handoffCode.uppercased())",
+        "oeee-cafe://handoff/done?code=\(handoffCode.dropLast())",
+        "oeee-cafe://handoff/done?code=\(handoffCode)0",
+        "oeee-cafe://handoff/done?code=\(handoffCode.dropLast())g",
+        "oeee-cafe://handoff/done?code=\(handoffCode.dropLast(2))%22)",
+        "oeee-cafe://handoff/done?code=\(handoffCode)&code=\(handoffCode)",
+    ])
+    func anythingElseIsNot(callback: String) throws {
+        let url = try #require(URL(string: callback))
+        #expect(BrowserSignIn.handoffCode(in: url) == nil)
+    }
+
+    @Test func theCodeIsHandedToThePageQuoted() {
+        let script = Scripts.signInResume(code: handoffCode)
+        #expect(script.contains("window.oeeeApp.signIn.resume(\"\(handoffCode)\");"))
+    }
+
+    /// Without a code -- or with one that is not -- the page is asked as it was before the
+    /// site sent codes.
+    @Test func withoutACodeThePageResumesAsBefore() {
+        let before = """
+            window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.resume \
+            && window.oeeeApp.signIn.resume();
+            """
+        #expect(Scripts.signInResume(code: nil) == before)
+        #expect(Scripts.signInResume(code: handoffCode.uppercased()) == before)
+        #expect(Scripts.signInResume(code: "\"); alert(1); (\"") == before)
+    }
 }
+
+/// A handoff's code as the site makes them: 64 lowercase hex digits.
+nonisolated private let handoffCode = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"

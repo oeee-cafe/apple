@@ -23,17 +23,21 @@ import AppKit
 /// 2. the app opens it in `ASWebAuthenticationSession` -- a browser of the system's, which
 ///    is what Google asks an app to use, and which the person's Safari sign-ins are already
 ///    in -- and the site's ordinary web sign-in runs there, ending on `/auth/handoff/done`,
-///    which goes to `oeee-cafe://handoff/done`, and that closes the session;
-/// 3. the app calls `window.oeeeApp.signIn.resume()`, and the page claims the sign-in
-///    (`POST /auth/handoff/claim`) at once, rather than at its next turn of asking. If the
+///    which goes to `oeee-cafe://handoff/done?code=<code>`, and that closes the session;
+/// 3. the app calls `window.oeeeApp.signIn.resume("<code>")`, and the page claims the
+///    sign-in with it (`POST /auth/handoff/claim`) at once, rather than at its next turn of
+///    asking. A callback without a code that is one (`isHandoffCode`) is still the browser
+///    finishing, and the page is told `resume()` with nothing, as before. If the
 ///    browser could not be opened, or was put away, it calls
 ///    `window.oeeeApp.signIn.unopened()` instead: the page asks the site once more -- the
 ///    sheet may have been put away just after the sign-in finished -- and otherwise stops
 ///    waiting, so the button works again.
 ///
 /// The browser signs nobody in to the web view: the page's claim does, with its own cookie.
-/// Nothing comes back through the app -- `oeee-cafe://handoff/done` carries nothing -- and
-/// the app never sees the handoff's secret, which stays in the page.
+/// What comes back through the app is the code alone, which the page sends with its claim;
+/// the handoff's secret is not it, and stays in the page. The app passes the code on and
+/// keeps nothing. It reaches the page as text inside a script, so only exactly 64 lowercase
+/// hex digits are let through; anything else in the callback is dropped.
 @MainActor
 enum BrowserSignIn {
     /// What `/auth/handoff/done` goes to, which ends the session. Caught by
@@ -58,6 +62,24 @@ enum BrowserSignIn {
         return isGoogle ? url : nil
     }
 
+    /// The handoff's code that `callback` (`oeee-cafe://handoff/done?code=<code>`) brings
+    /// back, or nil when it brings none, or more than one, or one that is not a code. The
+    /// site can only send one; a callback that differs is not taken a guess at.
+    static func handoffCode(in callback: URL) -> String? {
+        let codes = URLComponents(url: callback, resolvingAgainstBaseURL: false)?
+            .queryItems?.filter { $0.name == "code" } ?? []
+        guard codes.count == 1, let code = codes[0].value, isHandoffCode(code) else { return nil }
+        return code
+    }
+
+    /// Whether `text` is a handoff's code as the site makes them: exactly 64 lowercase hex
+    /// digits. This is what lets a code into a script (`Scripts.signInResume`), so it is
+    /// checked byte by byte rather than trusted to come from the site.
+    static func isHandoffCode(_ text: String) -> Bool {
+        let bytes = Array(text.utf8)
+        return bytes.count == 64 && bytes.allSatisfy { (0x30...0x39).contains($0) || (0x61...0x66).contains($0) }
+    }
+
     /// Opens `text` over the window of `webView` (`browse`, SiteBridge), and tells the page
     /// how it went.
     static func open(_ text: String, in webView: WKWebView) async {
@@ -79,8 +101,8 @@ enum BrowserSignIn {
         running = authorization
         let script: String
         do {
-            _ = try await authorization.perform(url: url, callbackScheme: callbackScheme)
-            script = Scripts.signInResume
+            let returned = try await authorization.perform(url: url, callbackScheme: callbackScheme)
+            script = Scripts.signInResume(code: handoffCode(in: returned))
         } catch let error as ASWebAuthenticationSessionError where error.code == .canceledLogin {
             script = Scripts.signInUnopened
         } catch {

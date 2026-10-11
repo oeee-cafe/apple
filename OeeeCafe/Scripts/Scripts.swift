@@ -61,12 +61,19 @@ enum Scripts {
         "window.oeeeApp && window.oeeeApp.password && window.oeeeApp.password.answer(told);"
 
     /// The browser a sign-in was handed to has finished (BrowserSignIn): the page claims the
-    /// sign-in now rather than at its next turn of asking (app_sign_in.jinja). Run with
+    /// sign-in now rather than at its next turn of asking (app_sign_in.jinja), with `code`,
+    /// the handoff's code that `oeee-cafe://handoff/done` brought back, when there is one.
+    /// The code goes into the script as a string literal, and only a code that is one
+    /// (`BrowserSignIn.isHandoffCode`) goes in at all: anything else is left out, and the page
+    /// is asked to resume without one, as it was before the site sent codes. Run with
     /// `callAsyncJavaScript`.
-    static let signInResume = """
-        window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.resume \
-        && window.oeeeApp.signIn.resume();
-        """
+    static func signInResume(code: String?) -> String {
+        let argument = code.flatMap { BrowserSignIn.isHandoffCode($0) ? literal($0) : nil } ?? ""
+        return """
+            window.oeeeApp && window.oeeeApp.signIn && window.oeeeApp.signIn.resume \
+            && window.oeeeApp.signIn.resume(\(argument));
+            """
+    }
 
     /// The browser a sign-in was handed to could not be opened, or was put away without
     /// finishing (BrowserSignIn): the page stops waiting for it, so its button works again.
@@ -102,7 +109,8 @@ enum Scripts {
     static var all: [String] {
         [
             wouldLoseWork, leaving, preferPen, painterCommand("toggle-eraser"),
-            siteCommand(.recent), pushToken, signInAnswer, signInResume, signInUnopened, passwordAnswer,
+            siteCommand(.recent), pushToken, signInAnswer, signInResume(code: nil),
+            signInResume(code: String(repeating: "0", count: 64)), signInUnopened, passwordAnswer,
             storePrices, storeEnded, storePurchased,
         ]
     }
