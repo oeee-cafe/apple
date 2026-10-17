@@ -15,7 +15,10 @@ enum SiteMessage: Equatable {
     case unread(count: Int)
     case theme(Theme)
     case haptic(name: String)
-    case pressed(Drawing?)
+    /// As a finger lands: the drawing it is on, if any, and whether a drag to the right from
+    /// there is the page's own -- a slider, a drawing zoomed closer, a row scrolled along --
+    /// rather than a swipe back (SwipeBack). An older site says nothing of it: not the page's.
+    case pressed(Drawing?, sideways: Bool)
     case painterReady
     /// What the App Store products on /supporter cost, and one to sell, as the store names
     /// it. The page only asks this build about its own store's (`data-store="apple"`), so
@@ -126,7 +129,7 @@ enum SiteMessage: Equatable {
         let message: SiteMessage?
 
         private enum Key: String, CodingKey {
-            case v, type, count, name, drawing, state, product, products, provider, nonce, url, action, id
+            case v, type, count, name, drawing, sideways, state, product, products, provider, nonce, url, action, id
         }
 
         init(from decoder: Decoder) throws {
@@ -145,7 +148,10 @@ enum SiteMessage: Equatable {
             case "haptic":
                 message = .haptic(name: try container.decode(String.self, forKey: .name))
             case "pressed":
-                message = .pressed(try container.decodeIfPresent(Drawing.self, forKey: .drawing))
+                message = .pressed(
+                    try container.decodeIfPresent(Drawing.self, forKey: .drawing),
+                    sideways: try container.decodeIfPresent(Bool.self, forKey: .sideways) ?? false
+                )
             case "painter":
                 message = try container.decodeIfPresent(String.self, forKey: .state) == "ready" ? .painterReady : nil
             case "prices":

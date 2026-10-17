@@ -38,7 +38,7 @@ struct AppContractTests {
         let examples = try #require(try Fixture.messages()["pressed"])
         var drawings = 0
         for example in examples {
-            guard case .pressed(let pressed?) = SiteMessage(body: try Fixture.string(example)) else { continue }
+            guard case .pressed(let pressed?, _) = SiteMessage(body: try Fixture.string(example)) else { continue }
             drawings += 1
             let drawing = try #require(DrawingMenu.drawing(from: pressed, referrer: nil))
             #expect(drawing.url.absoluteString == pressed.src)
@@ -82,13 +82,13 @@ struct AppContractTests {
     }
 
     /// The types this app reads; the rest are other apps' (`share`, `download`, `caption`,
-    /// and `notify`, which Windows is handed for want of the push this app is sent) and are
-    /// ignored.
+    /// `notify`, which Windows is handed for want of the push this app is sent, and Windows'
+    /// own `discord` and `steam`) and are ignored.
     private static let handled: Set<String> = [
         "page", "unread", "theme", "words", "haptic", "pressed", "painter", "prices",
         "purchase", "restore", "signIn", "browse", "window", "password",
     ]
-    private static let ignored: Set<String> = ["share", "download", "caption", "notify"]
+    private static let ignored: Set<String> = ["share", "download", "caption", "notify", "discord", "steam"]
 
     /// What the app should make of `example`, worked out from the example itself rather than
     /// by the parser under test.
@@ -124,13 +124,14 @@ struct AppContractTests {
         case "haptic":
             return .haptic(name: try field(example, "name"))
         case "pressed":
-            guard let drawing = example["drawing"] as? [String: Any] else { return .pressed(nil) }
+            let sideways: Bool = try field(example, "sideways")
+            guard let drawing = example["drawing"] as? [String: Any] else { return .pressed(nil, sideways: sideways) }
             return .pressed(SiteMessage.Drawing(
                 src: try field(drawing, "src"),
                 link: try field(drawing, "link"),
                 width: try field(drawing, "width"),
                 height: try field(drawing, "height")
-            ))
+            ), sideways: sideways)
         case "painter":
             #expect(example["state"] as? String == "ready")
             return .painterReady

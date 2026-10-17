@@ -155,6 +155,10 @@
         "presence": "collaborating",
         "community": "오이카페 \"모에화\"",
         "group": "0123456789abcdef",
+        "join": "/collaborate/9c881320-2b43-4afa-b2bb-7128c8a3e985",
+        "seats": 4,
+        "party": 2,
+        "since": 1760140800000,
         "painting": true,
         "refreshable": false,
         "v": 1,
@@ -166,6 +170,10 @@
         "presence": null,
         "community": null,
         "group": null,
+        "join": null,
+        "seats": null,
+        "party": null,
+        "since": null,
         "painting": false,
         "refreshable": true,
         "v": 1,
@@ -202,6 +210,12 @@
         "savedImage": "app-saved-image",
         "savedFile": "app-saved-file",
         "saveFailed": "app-save-failed",
+        "presenceBrowsing": "app-presence-browsing",
+        "presenceDrawing": "app-presence-drawing",
+        "presenceRelaying": "app-presence-relaying",
+        "presenceCollaborating": "app-presence-collaborating",
+        "presenceDrawingBanner": "app-presence-drawing-banner",
+        "presenceWatchingReplay": "app-presence-watching-replay",
         "v": 1,
         "type": "words"
       }
@@ -221,11 +235,19 @@
           "width": 300,
           "height": 200
         },
+        "sideways": false,
         "v": 1,
         "type": "pressed"
       },
       {
         "drawing": null,
+        "sideways": false,
+        "v": 1,
+        "type": "pressed"
+      },
+      {
+        "drawing": null,
+        "sideways": true,
         "v": 1,
         "type": "pressed"
       }
@@ -324,6 +346,33 @@
         "type": "notify"
       }
     ],
+    "discord": [
+      {
+        "action": "connect",
+        "v": 1,
+        "type": "discord"
+      },
+      {
+        "action": "invite",
+        "user": "80351110224678912",
+        "v": 1,
+        "type": "discord"
+      },
+      {
+        "action": "letIn",
+        "user": "80351110224678912",
+        "v": 1,
+        "type": "discord"
+      }
+    ],
+    "steam": [
+      {
+        "action": "invite",
+        "join": "/collaborate/9c881320-2b43-4afa-b2bb-7128c8a3e985",
+        "v": 1,
+        "type": "steam"
+      }
+    ],
     "caption": [
       {
         "place": {
@@ -352,7 +401,11 @@
     "store.ticket",
     "painter.command",
     "painter.preferPen",
-    "caption"
+    "caption",
+    "discord.state",
+    "discord.friends",
+    "discord.requests",
+    "discord.invited"
   ],
   "commands": [
     "recent",

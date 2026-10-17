@@ -81,6 +81,8 @@ final class WebController: NSObject, ObservableObject {
     var pressedDrawing: DrawingMenu.Drawing?
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
     lazy var pencil = UIPencilInteraction(delegate: self)
+    /// Back by a swipe to the right from anywhere on the page (SwipeBack.swift).
+    let swipeBack = SwipeBack()
     /// Where each download under way is being written, to offer once it is done
     /// (WebController+Downloads.swift).
     var downloadDestinations: [ObjectIdentifier: URL] = [:]
@@ -120,6 +122,7 @@ final class WebController: NSObject, ObservableObject {
         #if os(iOS)
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.addInteraction(pencil)
+        swipeBack.install(on: webView)
         _ = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -213,11 +216,12 @@ final class WebController: NSObject, ObservableObject {
             #else
             _ = name
             #endif
-        case .pressed(let drawing):
+        case .pressed(let drawing, let sideways):
             #if os(iOS)
             pressedDrawing = drawing.flatMap { DrawingMenu.drawing(from: $0, referrer: webView.url) }
+            swipeBack.landedSideways = sideways
             #else
-            _ = drawing
+            _ = (drawing, sideways)
             #endif
         case .painterReady:
             #if os(iOS)
@@ -245,6 +249,9 @@ final class WebController: NSObject, ObservableObject {
     }
 
     private func pageSaid(_ page: SiteMessage.Page) {
+        #if os(iOS)
+        swipeBack.pageSaid(path: page.path)
+        #endif
         if page.painting != isPainting || page.refreshable != isRefreshable {
             isPainting = page.painting
             isRefreshable = page.refreshable
@@ -310,11 +317,13 @@ final class WebController: NSObject, ObservableObject {
         }
     }
 
-    /// In the painter a swipe from the edge or down from the top is a stroke, not a way off
-    /// the page; and a page the site says may not be reloaded is not pulled down to reload.
+    /// In the painter a swipe or a pull down from the top is a stroke, not a way off the
+    /// page; and a page the site says may not be reloaded is not pulled down to reload.
     private func showPageState() {
         webView.allowsBackForwardNavigationGestures = !isPainting
         #if os(iOS)
+        swipeBack.isEnabled = !isPainting
+        swipeBack.leaveWebKitForward()
         webView.scrollView.refreshControl = isRefreshable && !isPainting ? refreshControl : nil
         // Pages shorter than the screen can be pulled too.
         webView.scrollView.alwaysBounceVertical = !isPainting
@@ -367,9 +376,11 @@ final class WebController: NSObject, ObservableObject {
         endRefreshing()
     }
 
+    /// A load ended, finished or not; one that failed has nothing to show for itself.
     func endRefreshing() {
         #if os(iOS)
         webView.scrollView.refreshControl?.endRefreshing()
+        swipeBack.loadEnded()
         #endif
     }
 
