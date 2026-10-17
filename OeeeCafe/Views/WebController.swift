@@ -81,8 +81,9 @@ final class WebController: NSObject, ObservableObject {
     var pressedDrawing: DrawingMenu.Drawing?
     /// Apple Pencil's double-tap and squeeze, for the painter (Pencil.swift).
     lazy var pencil = UIPencilInteraction(delegate: self)
-    /// Back by a swipe to the right from anywhere on the page (SwipeBack.swift).
-    let swipeBack = SwipeBack()
+    /// Back by a swipe to the right from anywhere on the page, and Forward from the right
+    /// edge (PageSwipe.swift).
+    let pageSwipe = PageSwipe()
     /// Where each download under way is being written, to offer once it is done
     /// (WebController+Downloads.swift).
     var downloadDestinations: [ObjectIdentifier: URL] = [:]
@@ -122,7 +123,7 @@ final class WebController: NSObject, ObservableObject {
         #if os(iOS)
         refreshControl.addTarget(self, action: #selector(refresh), for: .valueChanged)
         webView.addInteraction(pencil)
-        swipeBack.install(on: webView)
+        pageSwipe.install(on: webView)
         _ = NotificationCenter.default.addObserver(
             forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -219,7 +220,7 @@ final class WebController: NSObject, ObservableObject {
         case .pressed(let drawing, let sideways):
             #if os(iOS)
             pressedDrawing = drawing.flatMap { DrawingMenu.drawing(from: $0, referrer: webView.url) }
-            swipeBack.landedSideways = sideways
+            pageSwipe.landedSideways = sideways
             #else
             _ = (drawing, sideways)
             #endif
@@ -250,7 +251,7 @@ final class WebController: NSObject, ObservableObject {
 
     private func pageSaid(_ page: SiteMessage.Page) {
         #if os(iOS)
-        swipeBack.pageSaid(path: page.path)
+        pageSwipe.pageSaid(path: page.path)
         #endif
         if page.painting != isPainting || page.refreshable != isRefreshable {
             isPainting = page.painting
@@ -320,10 +321,10 @@ final class WebController: NSObject, ObservableObject {
     /// In the painter a swipe or a pull down from the top is a stroke, not a way off the
     /// page; and a page the site says may not be reloaded is not pulled down to reload.
     private func showPageState() {
-        webView.allowsBackForwardNavigationGestures = !isPainting
         #if os(iOS)
-        swipeBack.isEnabled = !isPainting
-        swipeBack.leaveWebKitForward()
+        // The swipes back and forward are the app's own (PageSwipe), never WebKit's too.
+        webView.allowsBackForwardNavigationGestures = false
+        pageSwipe.isEnabled = !isPainting
         webView.scrollView.refreshControl = isRefreshable && !isPainting ? refreshControl : nil
         // Pages shorter than the screen can be pulled too.
         webView.scrollView.alwaysBounceVertical = !isPainting
@@ -337,6 +338,8 @@ final class WebController: NSObject, ObservableObject {
         // is the page the painter was opened from.
         webView.scrollView.contentInsetAdjustmentBehavior = isPainting ? .never : .automatic
         pencil.isEnabled = isPainting
+        #else
+        webView.allowsBackForwardNavigationGestures = !isPainting
         #endif
     }
 
@@ -380,7 +383,7 @@ final class WebController: NSObject, ObservableObject {
     func endRefreshing() {
         #if os(iOS)
         webView.scrollView.refreshControl?.endRefreshing()
-        swipeBack.loadEnded()
+        pageSwipe.loadEnded()
         #endif
     }
 

@@ -78,7 +78,7 @@ extension WebController: WKNavigationDelegate {
         }
         if isMainFrame {
             #if os(iOS)
-            if navigationAction.navigationType != .backForward { swipeBack.keepPicture() }
+            if navigationAction.navigationType != .backForward { pageSwipe.keepPicture() }
             #endif
             requestedURL = url
             restored = navigationAction.navigationType == .backForward ? .arriving : .none

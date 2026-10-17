@@ -17,7 +17,7 @@ enum SiteMessage: Equatable {
     case haptic(name: String)
     /// As a finger lands: the drawing it is on, if any, and whether a drag to the right from
     /// there is the page's own -- a slider, a drawing zoomed closer, a row scrolled along --
-    /// rather than a swipe back (SwipeBack). An older site says nothing of it: not the page's.
+    /// rather than a swipe back (PageSwipe). An older site says nothing of it: not the page's.
     case pressed(Drawing?, sideways: Bool)
     case painterReady
     /// What the App Store products on /supporter cost, and one to sell, as the store names
