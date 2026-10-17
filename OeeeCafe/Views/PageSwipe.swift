@@ -180,13 +180,24 @@ final class PageSwipe: NSObject, UIGestureRecognizerDelegate {
     // MARK: - Arriving
 
     /// The page now on screen is a picture of the one gone to, which stays up until the page
-    /// itself is there to take its place.
-    private var leftPath: String?
+    /// itself has been painted under it: once WebKit has committed to it, or, for a page the
+    /// site changed to without a load (htmx), once the address is its and nothing is loading.
+    /// Not when WebKit finishes loading, which waits for every image on the page; and not
+    /// when the page says what it is, which a page the back-forward cache kept does not say
+    /// again.
+    private var leftURL: URL?
+    private var addressChanged: NSKeyValueObservation?
     private var waiting: Task<Void, Never>?
 
     private func go() {
         guard let webView else { return }
-        leftPath = webView.url?.path
+        leftURL = webView.url
+        addressChanged = webView.observe(\.url) { [weak self] webView, _ in
+            MainActor.assumeIsolated {
+                guard let self, webView.url != self.leftURL, !webView.isLoading else { return }
+                self.painted()
+            }
+        }
         if direction == .back {
             webView.goBack()
         } else {
@@ -200,29 +211,41 @@ final class PageSwipe: NSObject, UIGestureRecognizerDelegate {
         }
     }
 
-    /// A page said what it is (WebController.pageSaid): if it is not the page left, the
-    /// page gone to is on screen.
-    func pageSaid(path: String) {
-        guard stage != nil, leftPath != nil, path != leftPath else { return }
+    /// WebKit committed to a page (WebController+Navigation): the one gone to.
+    func committed() {
+        guard leftURL != nil else { return }
+        painted()
+    }
+
+    /// A load that failed leaves the page that was there: nothing more is coming.
+    func loadFailed() {
+        guard leftURL != nil else { return }
         arrived()
     }
 
-    /// WebKit finished loading a page, or failed to: the swipe's page is over either way.
-    func loadEnded() {
-        guard stage != nil, leftPath != nil else { return }
-        arrived()
+    /// Waits for the page gone to to be painted -- two frames of its own, the first of which
+    /// may come before anything is drawn -- in a world of the app's, apart from the site's.
+    private func painted() {
+        guard let webView else { return }
+        addressChanged = nil
+        Task { [weak self] in
+            _ = try? await webView.callAsyncJavaScript(
+                "await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));",
+                arguments: [:], in: nil, contentWorld: .defaultClient
+            )
+            self?.arrived()
+        }
     }
 
     private func arrived() {
+        guard leftURL != nil else { return }
         waiting?.cancel()
         waiting = nil
-        leftPath = nil
-        // A frame for the page to paint under the picture before the picture goes.
+        addressChanged = nil
+        leftURL = nil
         let stage = self.stage
         self.stage = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            stage?.fadeAway()
-        }
+        stage?.fadeAway()
     }
 }
 
@@ -255,6 +278,9 @@ private final class Stage {
         container.insertSubview(view, aboveSubview: webView)
 
         for layer in [under, shade, top] {
+            // A picture is kept and shown again, and it keeps where the last swipe left it:
+            // a frame set through a transform lands that far out.
+            layer.transform = .identity
             layer.frame = view.bounds
             view.addSubview(layer)
         }

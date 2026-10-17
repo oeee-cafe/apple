@@ -93,16 +93,28 @@ extension WebController: WKNavigationDelegate {
         Self.isDownload(navigationResponse) ? .download : .allow
     }
 
+    func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
+        #if os(iOS)
+        pageSwipe.committed()
+        #endif
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         pageFinished()
     }
 
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
         endRefreshing()
+        #if os(iOS)
+        pageSwipe.loadFailed()
+        #endif
     }
 
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
         endRefreshing()
+        #if os(iOS)
+        pageSwipe.loadFailed()
+        #endif
         if Self.isUnreachable(error) {
             pageUnreachable()
         }

@@ -250,9 +250,6 @@ final class WebController: NSObject, ObservableObject {
     }
 
     private func pageSaid(_ page: SiteMessage.Page) {
-        #if os(iOS)
-        pageSwipe.pageSaid(path: page.path)
-        #endif
         if page.painting != isPainting || page.refreshable != isRefreshable {
             isPainting = page.painting
             isRefreshable = page.refreshable
@@ -379,11 +376,9 @@ final class WebController: NSObject, ObservableObject {
         endRefreshing()
     }
 
-    /// A load ended, finished or not; one that failed has nothing to show for itself.
     func endRefreshing() {
         #if os(iOS)
         webView.scrollView.refreshControl?.endRefreshing()
-        pageSwipe.loadEnded()
         #endif
     }
 
