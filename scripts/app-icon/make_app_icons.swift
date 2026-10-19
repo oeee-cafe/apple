@@ -6,8 +6,9 @@
 //   swift scripts/app-icon/make_app_icons.swift
 //
 //   light.png  iOS, by day: the site's light ground, full bleed and opaque
-//   dark.png   iOS, by night: the site's night blue, its grid two steps
-//              brighter than the site's so it holds at icon size
+//   dark.png   iOS, by night: the slice alone on transparency, on the dark
+//              ground iOS draws behind it, which sits better among the other
+//              dark icons than the site's night grid did
 //   mac.png    the light icon on Apple's macOS template: an 824 squircle on
 //              the 1024 canvas, with the shadow under it
 //
@@ -32,7 +33,8 @@ struct Theme {
     let shadowOpacity: Double
 }
 let light = Theme(ground: 0xccccff, grid: 0xbbbbff, shadow: 0x1c2811, shadowOpacity: 0.34)
-let dark = Theme(ground: 0x17172b, grid: 0x36366a, shadow: 0x000000, shadowOpacity: 0.6)
+// By night only the shadow is ours; the ground is the system's.
+let darkShadow = (color: UInt32(0x000000), opacity: 0.6)
 
 func color(_ hex: UInt32, _ alpha: Double = 1) -> CGColor {
     CGColor(red: Double((hex >> 16) & 0xff) / 255, green: Double((hex >> 8) & 0xff) / 255,
@@ -74,10 +76,10 @@ func drawGround(_ ctx: CGContext, _ rect: CGRect, _ theme: Theme) {
     }
 }
 
-func drawSlice(_ ctx: CGContext, _ rect: CGRect, _ theme: Theme) {
+func drawSlice(_ ctx: CGContext, _ rect: CGRect, shadow: UInt32, opacity: Double) {
     ctx.saveGState()
     ctx.setShadow(offset: CGSize(width: 0, height: -rect.width * 0.024),
-                  blur: rect.width * 0.048, color: color(theme.shadow, theme.shadowOpacity))
+                  blur: rect.width * 0.048, color: color(shadow, opacity))
     ctx.interpolationQuality = .high
     ctx.draw(slice, in: rect)
     ctx.restoreGState()
@@ -91,16 +93,25 @@ func write(_ ctx: CGContext, _ name: String) {
     print("wrote \(url.path)")
 }
 
-// iOS: full bleed, the system rounds the corners. Opaque, as App Store
-// Connect wants the iOS icon.
-for (name, theme) in [("light.png", light), ("dark.png", dark)] {
+// iOS: full bleed, the system rounds the corners. The light icon is opaque,
+// as App Store Connect wants it; the dark one is transparent, as Apple asks
+// of a dark icon so the system can draw its own ground.
+do {
     let ctx = CGContext(data: nil, width: Int(size), height: Int(size), bitsPerComponent: 8,
                         bytesPerRow: 0, space: space,
                         bitmapInfo: CGImageAlphaInfo.noneSkipLast.rawValue)!
     let rect = CGRect(x: 0, y: 0, width: size, height: size)
-    drawGround(ctx, rect, theme)
-    drawSlice(ctx, rect, theme)
-    write(ctx, name)
+    drawGround(ctx, rect, light)
+    drawSlice(ctx, rect, shadow: light.shadow, opacity: light.shadowOpacity)
+    write(ctx, "light.png")
+}
+do {
+    let ctx = CGContext(data: nil, width: Int(size), height: Int(size), bitsPerComponent: 8,
+                        bytesPerRow: 0, space: space,
+                        bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    let rect = CGRect(x: 0, y: 0, width: size, height: size)
+    drawSlice(ctx, rect, shadow: darkShadow.color, opacity: darkShadow.opacity)
+    write(ctx, "dark.png")
 }
 
 // Mac: the squircle, the shadow a light tile needs to be seen against a
@@ -126,7 +137,7 @@ do {
     ctx.setStrokeColor(color(0xffffff, 0.35))
     ctx.setLineWidth(4)
     ctx.strokePath()
-    drawSlice(ctx, rect, light)
+    drawSlice(ctx, rect, shadow: light.shadow, opacity: light.shadowOpacity)
     ctx.restoreGState()
     write(ctx, "mac.png")
 }
